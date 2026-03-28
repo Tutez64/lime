@@ -29,6 +29,12 @@
 
 namespace lime {
 
+	// TODO(lime): `defined (LIME_GLES3_API) || !defined (LIME_GLES)` is a
+	// stopgap for desktop-valid modern GL wrappers. Desktop proc loading already
+	// exists, but `LIME_GLES3_API` is too narrow a gate for desktop GL. Audit the
+	// remaining GLES3-only wrappers and replace this pattern with an explicit
+	// desktop-GL macro/capability gate later, rather than broadening everything
+	// mechanically.
 
 	bool OpenGLBindings::initialized = false;
 
@@ -425,8 +431,10 @@ namespace lime {
 
 	void lime_gl_bind_sampler (int unit, int sampler) {
 
-		#ifdef LIME_GLES3_API
-		glBindSampler (unit, sampler);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glBindSampler) {
+			glBindSampler (unit, sampler);
+		}
 		#endif
 
 	}
@@ -434,8 +442,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_bind_sampler) (int unit, int sampler) {
 
-		#ifdef LIME_GLES3_API
-		glBindSampler (unit, sampler);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glBindSampler) {
+			glBindSampler (unit, sampler);
+		}
 		#endif
 
 	}
@@ -475,8 +485,10 @@ namespace lime {
 
 	void lime_gl_bind_vertex_array (int vertexArray) {
 
-		#ifdef LIME_GLES3_API
-		glBindVertexArray (vertexArray);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glBindVertexArray) {
+			glBindVertexArray (vertexArray);
+		}
 		#endif
 
 	}
@@ -484,8 +496,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_bind_vertex_array) (int vertexArray) {
 
-		#ifdef LIME_GLES3_API
-		glBindVertexArray (vertexArray);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glBindVertexArray) {
+			glBindVertexArray (vertexArray);
+		}
 		#endif
 
 	}
@@ -563,8 +577,10 @@ namespace lime {
 
 	void lime_gl_blit_framebuffer (int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, int mask, int filter) {
 
-		#ifdef LIME_GLES3_API
-		glBlitFramebuffer (srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glBlitFramebuffer) {
+			glBlitFramebuffer (srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+		}
 		#endif
 
 	}
@@ -572,8 +588,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_blit_framebuffer) (int srcX0, int srcY0, int srcX1, int srcY1, int dstX0, int dstY0, int dstX1, int dstY1, int mask, int filter) {
 
-		#ifdef LIME_GLES3_API
-		glBlitFramebuffer (srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glBlitFramebuffer) {
+			glBlitFramebuffer (srcX0, srcY0, srcX1, srcY1, dstX0, dstY0, dstX1, dstY1, mask, filter);
+		}
 		#endif
 
 	}
@@ -639,8 +657,10 @@ namespace lime {
 
 	void lime_gl_clear_bufferfi (int buffer, int drawBuffer, float depth, int stencil) {
 
-		#ifdef LIME_GLES3_API
-		glClearBufferfi (buffer, drawBuffer, depth, stencil);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glClearBufferfi) {
+			glClearBufferfi (buffer, drawBuffer, depth, stencil);
+		}
 		#endif
 
 	}
@@ -648,8 +668,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_clear_bufferfi) (int buffer, int drawBuffer, float depth, int stencil) {
 
-		#ifdef LIME_GLES3_API
-		glClearBufferfi (buffer, drawBuffer, depth, stencil);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glClearBufferfi) {
+			glClearBufferfi (buffer, drawBuffer, depth, stencil);
+		}
 		#endif
 
 	}
@@ -657,8 +679,10 @@ namespace lime {
 
 	void lime_gl_clear_bufferfv (int buffer, int drawBuffer, double data) {
 
-		#ifdef LIME_GLES3_API
-		glClearBufferfv (buffer, drawBuffer, (GLfloat*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glClearBufferfv) {
+			glClearBufferfv (buffer, drawBuffer, (GLfloat*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -666,8 +690,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_clear_bufferfv) (int buffer, int drawBuffer, double data) {
 
-		#ifdef LIME_GLES3_API
-		glClearBufferfv (buffer, drawBuffer, (GLfloat*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glClearBufferfv) {
+			glClearBufferfv (buffer, drawBuffer, (GLfloat*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -675,8 +701,10 @@ namespace lime {
 
 	void lime_gl_clear_bufferiv (int buffer, int drawBuffer, double data) {
 
-		#ifdef LIME_GLES3_API
-		glClearBufferiv (buffer, drawBuffer, (GLint*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glClearBufferiv) {
+			glClearBufferiv (buffer, drawBuffer, (GLint*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -684,8 +712,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_clear_bufferiv) (int buffer, int drawBuffer, double data) {
 
-		#ifdef LIME_GLES3_API
-		glClearBufferiv (buffer, drawBuffer, (GLint*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glClearBufferiv) {
+			glClearBufferiv (buffer, drawBuffer, (GLint*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -693,8 +723,10 @@ namespace lime {
 
 	void lime_gl_clear_bufferuiv (int buffer, int drawBuffer, double data) {
 
-		#ifdef LIME_GLES3_API
-		glClearBufferuiv (buffer, drawBuffer, (GLuint*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glClearBufferuiv) {
+			glClearBufferuiv (buffer, drawBuffer, (GLuint*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -702,8 +734,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_clear_bufferuiv) (int buffer, int drawBuffer, double data) {
 
-		#ifdef LIME_GLES3_API
-		glClearBufferuiv (buffer, drawBuffer, (GLuint*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glClearBufferuiv) {
+			glClearBufferuiv (buffer, drawBuffer, (GLuint*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -877,8 +911,10 @@ namespace lime {
 
 	void lime_gl_copy_buffer_sub_data (int readTarget, int writeTarget, double readOffset, double writeOffset, int size) {
 
-		#ifdef LIME_GLES3_API
-		glCopyBufferSubData (readTarget, writeTarget, (GLintptr)(uintptr_t)readOffset, (GLintptr)(uintptr_t)writeOffset, size);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glCopyBufferSubData) {
+			glCopyBufferSubData (readTarget, writeTarget, (GLintptr)(uintptr_t)readOffset, (GLintptr)(uintptr_t)writeOffset, size);
+		}
 		#endif
 
 	}
@@ -886,8 +922,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_copy_buffer_sub_data) (int readTarget, int writeTarget, double readOffset, double writeOffset, int size) {
 
-		#ifdef LIME_GLES3_API
-		glCopyBufferSubData (readTarget, writeTarget, (GLintptr)(uintptr_t)readOffset, (GLintptr)(uintptr_t)writeOffset, size);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glCopyBufferSubData) {
+			glCopyBufferSubData (readTarget, writeTarget, (GLintptr)(uintptr_t)readOffset, (GLintptr)(uintptr_t)writeOffset, size);
+		}
 		#endif
 
 	}
@@ -923,8 +961,10 @@ namespace lime {
 
 	void lime_gl_copy_tex_sub_image_3d (int target, int level, int xoffset, int yoffset, int zoffset, int x, int y, int width, int height) {
 
-		#ifdef LIME_GLES3_API
-		glCopyTexSubImage3D (target, level, xoffset, yoffset, zoffset, x, y, width, height);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glCopyTexSubImage3D) {
+			glCopyTexSubImage3D (target, level, xoffset, yoffset, zoffset, x, y, width, height);
+		}
 		#endif
 
 	}
@@ -932,8 +972,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_copy_tex_sub_image_3d) (int target, int level, int xoffset, int yoffset, int zoffset, int x, int y, int width, int height) {
 
-		#ifdef LIME_GLES3_API
-		glCopyTexSubImage3D (target, level, xoffset, yoffset, zoffset, x, y, width, height);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glCopyTexSubImage3D) {
+			glCopyTexSubImage3D (target, level, xoffset, yoffset, zoffset, x, y, width, height);
+		}
 		#endif
 
 	}
@@ -1032,8 +1074,10 @@ namespace lime {
 	int lime_gl_create_sampler () {
 
 		GLuint id = 0;
-		#ifdef LIME_GLES3_API
-		glGenSamplers (1, &id);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGenSamplers) {
+			glGenSamplers (1, &id);
+		}
 		#endif
 		return id;
 
@@ -1043,8 +1087,10 @@ namespace lime {
 	HL_PRIM int HL_NAME(hl_gl_create_sampler) () {
 
 		GLuint id = 0;
-		#ifdef LIME_GLES3_API
-		glGenSamplers (1, &id);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGenSamplers) {
+			glGenSamplers (1, &id);
+		}
 		#endif
 		return id;
 
@@ -1108,8 +1154,10 @@ namespace lime {
 	int lime_gl_create_vertex_array () {
 
 		GLuint id = 0;
-		#ifdef LIME_GLES3_API
-		glGenVertexArrays (1, &id);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGenVertexArrays) {
+			glGenVertexArrays (1, &id);
+		}
 		#endif
 		return id;
 
@@ -1119,8 +1167,10 @@ namespace lime {
 	HL_PRIM int HL_NAME(hl_gl_create_vertex_array) () {
 
 		GLuint id = 0;
-		#ifdef LIME_GLES3_API
-		glGenVertexArrays (1, &id);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGenVertexArrays) {
+			glGenVertexArrays (1, &id);
+		}
 		#endif
 		return id;
 
@@ -1217,8 +1267,10 @@ namespace lime {
 
 	void lime_gl_delete_sampler (int sampler) {
 
-		#ifdef LIME_GLES3_API
-		glDeleteSamplers (1, (GLuint*)&sampler);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDeleteSamplers) {
+			glDeleteSamplers (1, (GLuint*)&sampler);
+		}
 		#endif
 
 	}
@@ -1226,8 +1278,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_delete_sampler) (int sampler) {
 
-		#ifdef LIME_GLES3_API
-		glDeleteSamplers (1, (GLuint*)&sampler);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDeleteSamplers) {
+			glDeleteSamplers (1, (GLuint*)&sampler);
+		}
 		#endif
 
 	}
@@ -1301,8 +1355,10 @@ namespace lime {
 
 	void lime_gl_delete_vertex_array (int vertexArray) {
 
-		#ifdef LIME_GLES3_API
-		glDeleteVertexArrays (1, (GLuint*)&vertexArray);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDeleteVertexArrays) {
+			glDeleteVertexArrays (1, (GLuint*)&vertexArray);
+		}
 		#endif
 
 	}
@@ -1310,8 +1366,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_delete_vertex_array) (int vertexArray) {
 
-		#ifdef LIME_GLES3_API
-		glDeleteVertexArrays (1, (GLuint*)&vertexArray);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDeleteVertexArrays) {
+			glDeleteVertexArrays (1, (GLuint*)&vertexArray);
+		}
 		#endif
 
 	}
@@ -1425,8 +1483,10 @@ namespace lime {
 
 	void lime_gl_draw_arrays_instanced (int mode, int first, int count, int instanceCount) {
 
-		#ifdef LIME_GLES3_API
-		glDrawArraysInstanced (mode, first, count, instanceCount);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDrawArraysInstanced) {
+			glDrawArraysInstanced (mode, first, count, instanceCount);
+		}
 		#endif
 
 	}
@@ -1434,8 +1494,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_draw_arrays_instanced) (int mode, int first, int count, int instanceCount) {
 
-		#ifdef LIME_GLES3_API
-		glDrawArraysInstanced (mode, first, count, instanceCount);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDrawArraysInstanced) {
+			glDrawArraysInstanced (mode, first, count, instanceCount);
+		}
 		#endif
 
 	}
@@ -1443,17 +1505,19 @@ namespace lime {
 
 	void lime_gl_draw_buffers (value buffers) {
 
-		#ifdef LIME_GLES3_API
-		GLsizei size = val_array_size (buffers);
-		GLenum *_buffers = (GLenum*)alloca (size * sizeof(GLenum));
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDrawBuffers) {
+			GLsizei size = val_array_size (buffers);
+			GLenum *_buffers = (GLenum*)alloca (size * sizeof(GLenum));
 
-		for (int i = 0; i < size; i++) {
+			for (int i = 0; i < size; i++) {
 
-			_buffers[i] = val_int (val_array_i (buffers, i));
+				_buffers[i] = val_int (val_array_i (buffers, i));
 
+			}
+
+			glDrawBuffers (size, _buffers);
 		}
-
-		glDrawBuffers (size, _buffers);
 		#endif
 
 	}
@@ -1461,9 +1525,11 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_draw_buffers) (hl_varray* buffers) {
 
-		#ifdef LIME_GLES3_API
-		GLsizei size = buffers->size;
-		glDrawBuffers (size, (GLenum*)hl_aptr (buffers, int));
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDrawBuffers) {
+			GLsizei size = buffers->size;
+			glDrawBuffers (size, (GLenum*)hl_aptr (buffers, int));
+		}
 		#endif
 
 	}
@@ -1485,8 +1551,10 @@ namespace lime {
 
 	void lime_gl_draw_elements_instanced (int mode, int count, int type, double offset, int instanceCount) {
 
-		#ifdef LIME_GLES3_API
-		glDrawElementsInstanced (mode, count, type, (void*)(uintptr_t)offset, instanceCount);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDrawElementsInstanced) {
+			glDrawElementsInstanced (mode, count, type, (void*)(uintptr_t)offset, instanceCount);
+		}
 		#endif
 
 	}
@@ -1494,8 +1562,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_draw_elements_instanced) (int mode, int count, int type, double offset, int instanceCount) {
 
-		#ifdef LIME_GLES3_API
-		glDrawElementsInstanced (mode, count, type, (void*)(uintptr_t)offset, instanceCount);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDrawElementsInstanced) {
+			glDrawElementsInstanced (mode, count, type, (void*)(uintptr_t)offset, instanceCount);
+		}
 		#endif
 
 	}
@@ -1503,8 +1573,10 @@ namespace lime {
 
 	void lime_gl_draw_range_elements (int mode, int start, int end, int count, int type, double offset) {
 
-		#ifdef LIME_GLES3_API
-		glDrawRangeElements (mode, start, end, count, type, (void*)(uintptr_t)offset);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDrawRangeElements) {
+			glDrawRangeElements (mode, start, end, count, type, (void*)(uintptr_t)offset);
+		}
 		#endif
 
 	}
@@ -1512,8 +1584,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_draw_range_elements) (int mode, int start, int end, int count, int type, double offset) {
 
-		#ifdef LIME_GLES3_API
-		glDrawRangeElements (mode, start, end, count, type, (void*)(uintptr_t)offset);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glDrawRangeElements) {
+			glDrawRangeElements (mode, start, end, count, type, (void*)(uintptr_t)offset);
+		}
 		#endif
 
 	}
@@ -1669,8 +1743,10 @@ namespace lime {
 
 	void lime_gl_framebuffer_texture_layer (int target, int attachment, int texture, int level, int layer) {
 
-		#ifdef LIME_GLES3_API
-		glFramebufferTextureLayer (target, attachment, texture, level, layer);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glFramebufferTextureLayer) {
+			glFramebufferTextureLayer (target, attachment, texture, level, layer);
+		}
 		#endif
 
 	}
@@ -1678,8 +1754,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_framebuffer_texture_layer) (int target, int attachment, int texture, int level, int layer) {
 
-		#ifdef LIME_GLES3_API
-		glFramebufferTextureLayer (target, attachment, texture, level, layer);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glFramebufferTextureLayer) {
+			glFramebufferTextureLayer (target, attachment, texture, level, layer);
+		}
 		#endif
 
 	}
@@ -2669,8 +2747,10 @@ namespace lime {
 	float lime_gl_get_sampler_parameterf (int sampler, int pname) {
 
 		GLfloat param = 0;
-		#ifdef LIME_GLES3_API
-		glGetSamplerParameterfv (sampler, pname, &param);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetSamplerParameterfv) {
+			glGetSamplerParameterfv (sampler, pname, &param);
+		}
 		#endif
 		return param;
 
@@ -2680,8 +2760,10 @@ namespace lime {
 	HL_PRIM float HL_NAME(hl_gl_get_sampler_parameterf) (int sampler, int pname) {
 
 		GLfloat param = 0;
-		#ifdef LIME_GLES3_API
-		glGetSamplerParameterfv (sampler, pname, &param);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetSamplerParameterfv) {
+			glGetSamplerParameterfv (sampler, pname, &param);
+		}
 		#endif
 		return param;
 
@@ -2690,8 +2772,10 @@ namespace lime {
 
 	void lime_gl_get_sampler_parameterfv (int sampler, int pname, double params) {
 
-		#ifdef LIME_GLES3_API
-		glGetSamplerParameterfv (sampler, pname, (GLfloat*)(uintptr_t)params);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetSamplerParameterfv) {
+			glGetSamplerParameterfv (sampler, pname, (GLfloat*)(uintptr_t)params);
+		}
 		#endif
 
 	}
@@ -2699,8 +2783,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_get_sampler_parameterfv) (int sampler, int pname, double params) {
 
-		#ifdef LIME_GLES3_API
-		glGetSamplerParameterfv (sampler, pname, (GLfloat*)(uintptr_t)params);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetSamplerParameterfv) {
+			glGetSamplerParameterfv (sampler, pname, (GLfloat*)(uintptr_t)params);
+		}
 		#endif
 
 	}
@@ -2709,8 +2795,10 @@ namespace lime {
 	int lime_gl_get_sampler_parameteri (int sampler, int pname) {
 
 		GLint param = 0;
-		#ifdef LIME_GLES3_API
-		glGetSamplerParameteriv (sampler, pname, &param);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetSamplerParameteriv) {
+			glGetSamplerParameteriv (sampler, pname, &param);
+		}
 		#endif
 		return param;
 
@@ -2720,8 +2808,10 @@ namespace lime {
 	HL_PRIM int HL_NAME(hl_gl_get_sampler_parameteri) (int sampler, int pname) {
 
 		GLint param = 0;
-		#ifdef LIME_GLES3_API
-		glGetSamplerParameteriv (sampler, pname, &param);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetSamplerParameteriv) {
+			glGetSamplerParameteriv (sampler, pname, &param);
+		}
 		#endif
 		return param;
 
@@ -2730,8 +2820,10 @@ namespace lime {
 
 	void lime_gl_get_sampler_parameteriv (int sampler, int pname, double params) {
 
-		#ifdef LIME_GLES3_API
-		glGetSamplerParameteriv (sampler, pname, (GLint*)(uintptr_t)params);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetSamplerParameteriv) {
+			glGetSamplerParameteriv (sampler, pname, (GLint*)(uintptr_t)params);
+		}
 		#endif
 
 	}
@@ -2739,8 +2831,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_get_sampler_parameteriv) (int sampler, int pname, double params) {
 
-		#ifdef LIME_GLES3_API
-		glGetSamplerParameteriv (sampler, pname, (GLint*)(uintptr_t)params);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetSamplerParameteriv) {
+			glGetSamplerParameteriv (sampler, pname, (GLint*)(uintptr_t)params);
+		}
 		#endif
 
 	}
@@ -3488,17 +3582,19 @@ namespace lime {
 
 	void lime_gl_invalidate_framebuffer (int target, value attachments) {
 
-		#ifdef LIME_GLES3_API
-		GLint size = val_array_size (attachments);
-		GLenum *_attachments = (GLenum*)alloca (size * sizeof(GLenum));
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glInvalidateFramebuffer) {
+			GLint size = val_array_size (attachments);
+			GLenum *_attachments = (GLenum*)alloca (size * sizeof(GLenum));
 
-		for (int i = 0; i < size; i++) {
+			for (int i = 0; i < size; i++) {
 
-			_attachments[i] = val_int (val_array_i (attachments, i));
+				_attachments[i] = val_int (val_array_i (attachments, i));
 
+			}
+
+			glInvalidateFramebuffer (target, size, _attachments);
 		}
-
-		glInvalidateFramebuffer (target, size, _attachments);
 		#endif
 
 	}
@@ -3506,9 +3602,11 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_invalidate_framebuffer) (int target, varray* attachments) {
 
-		#ifdef LIME_GLES3_API
-		GLint size = attachments->size;
-		glInvalidateFramebuffer (target, size, (GLenum*)hl_aptr (attachments, int));
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glInvalidateFramebuffer) {
+			GLint size = attachments->size;
+			glInvalidateFramebuffer (target, size, (GLenum*)hl_aptr (attachments, int));
+		}
 		#endif
 
 	}
@@ -3516,17 +3614,19 @@ namespace lime {
 
 	void lime_gl_invalidate_sub_framebuffer (int target, value attachments, int x, int y, int width, int height) {
 
-		#ifdef LIME_GLES3_API
-		GLint size = val_array_size (attachments);
-		GLenum *_attachments = (GLenum*)alloca (size * sizeof(GLenum));
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glInvalidateSubFramebuffer) {
+			GLint size = val_array_size (attachments);
+			GLenum *_attachments = (GLenum*)alloca (size * sizeof(GLenum));
 
-		for (int i = 0; i < size; i++) {
+			for (int i = 0; i < size; i++) {
 
-			_attachments[i] = val_int (val_array_i (attachments, i));
+				_attachments[i] = val_int (val_array_i (attachments, i));
 
+			}
+
+			glInvalidateSubFramebuffer (target, size, _attachments, x, y, width, height);
 		}
-
-		glInvalidateSubFramebuffer (target, size, _attachments, x, y, width, height);
 		#endif
 
 	}
@@ -3534,9 +3634,11 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_invalidate_sub_framebuffer) (int target, varray* attachments, int x, int y, int width, int height) {
 
-		#ifdef LIME_GLES3_API
-		GLint size = attachments->size;
-		glInvalidateSubFramebuffer (target, size, (GLenum*)hl_aptr (attachments, int), x, y, width, height);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glInvalidateSubFramebuffer) {
+			GLint size = attachments->size;
+			glInvalidateSubFramebuffer (target, size, (GLenum*)hl_aptr (attachments, int), x, y, width, height);
+		}
 		#endif
 
 	}
@@ -3636,8 +3738,8 @@ namespace lime {
 
 	bool lime_gl_is_sampler (int handle) {
 
-		#ifdef LIME_GLES3_API
-		return glIsSampler (handle);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		return glIsSampler ? glIsSampler (handle) : false;
 		#else
 		return false;
 		#endif
@@ -3647,8 +3749,8 @@ namespace lime {
 
 	HL_PRIM bool HL_NAME(hl_gl_is_sampler) (int handle) {
 
-		#ifdef LIME_GLES3_API
-		return glIsSampler (handle);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		return glIsSampler ? glIsSampler (handle) : false;
 		#else
 		return false;
 		#endif
@@ -3732,8 +3834,8 @@ namespace lime {
 
 	bool lime_gl_is_vertex_array (int handle) {
 
-		#ifdef LIME_GLES3_API
-		return glIsQuery (handle);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		return glIsVertexArray ? glIsVertexArray (handle) : false;
 		#else
 		return false;
 		#endif
@@ -3743,8 +3845,8 @@ namespace lime {
 
 	HL_PRIM bool HL_NAME(hl_gl_is_vertex_array) (int handle) {
 
-		#ifdef LIME_GLES3_API
-		return glIsQuery (handle);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		return glIsVertexArray ? glIsVertexArray (handle) : false;
 		#else
 		return false;
 		#endif
@@ -4025,8 +4127,10 @@ namespace lime {
 
 	void lime_gl_read_buffer (int src) {
 
-		#ifdef LIME_GLES3_API
-		glReadBuffer (src);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glReadBuffer) {
+			glReadBuffer (src);
+		}
 		#endif
 
 	}
@@ -4034,8 +4138,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_read_buffer) (int src) {
 
-		#ifdef LIME_GLES3_API
-		glReadBuffer (src);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glReadBuffer) {
+			glReadBuffer (src);
+		}
 		#endif
 
 	}
@@ -4089,8 +4195,10 @@ namespace lime {
 
 	void lime_gl_renderbuffer_storage_multisample (int target, int samples, int internalformat, int width, int height) {
 
-		#ifdef LIME_GLES3_API
-		glRenderbufferStorageMultisample (target, samples, internalformat, width, height);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glRenderbufferStorageMultisample) {
+			glRenderbufferStorageMultisample (target, samples, internalformat, width, height);
+		}
 		#endif
 
 	}
@@ -4098,8 +4206,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_renderbuffer_storage_multisample) (int target, int samples, int internalformat, int width, int height) {
 
-		#ifdef LIME_GLES3_API
-		glRenderbufferStorageMultisample (target, samples, internalformat, width, height);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glRenderbufferStorageMultisample) {
+			glRenderbufferStorageMultisample (target, samples, internalformat, width, height);
+		}
 		#endif
 
 	}
@@ -4143,8 +4253,10 @@ namespace lime {
 
 	void lime_gl_sampler_parameterf (int sampler, int pname, float param) {
 
-		#ifdef LIME_GLES3_API
-		glSamplerParameterf (sampler, pname, param);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glSamplerParameterf) {
+			glSamplerParameterf (sampler, pname, param);
+		}
 		#endif
 
 	}
@@ -4152,8 +4264,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_sampler_parameterf) (int sampler, int pname, float param) {
 
-		#ifdef LIME_GLES3_API
-		glSamplerParameterf (sampler, pname, param);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glSamplerParameterf) {
+			glSamplerParameterf (sampler, pname, param);
+		}
 		#endif
 
 	}
@@ -4161,8 +4275,10 @@ namespace lime {
 
 	void lime_gl_sampler_parameteri (int sampler, int pname, int param) {
 
-		#ifdef LIME_GLES3_API
-		glSamplerParameteri (sampler, pname, param);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glSamplerParameteri) {
+			glSamplerParameteri (sampler, pname, param);
+		}
 		#endif
 
 	}
@@ -4170,8 +4286,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_sampler_parameteri) (int sampler, int pname, int param) {
 
-		#ifdef LIME_GLES3_API
-		glSamplerParameteri (sampler, pname, param);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glSamplerParameteri) {
+			glSamplerParameteri (sampler, pname, param);
+		}
 		#endif
 
 	}
@@ -4334,8 +4452,10 @@ namespace lime {
 
 	void lime_gl_tex_image_3d (int target, int level, int internalformat, int width, int height, int depth, int border, int format, int type, double data) {
 
-		#ifdef LIME_GLES3_API
-		glTexImage3D (target, level, internalformat, width, height, depth, border, format, type, (void*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glTexImage3D) {
+			glTexImage3D (target, level, internalformat, width, height, depth, border, format, type, (void*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -4343,8 +4463,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_tex_image_3d) (int target, int level, int internalformat, int width, int height, int depth, int border, int format, int type, double data) {
 
-		#ifdef LIME_GLES3_API
-		glTexImage3D (target, level, internalformat, width, height, depth, border, format, type, (void*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glTexImage3D) {
+			glTexImage3D (target, level, internalformat, width, height, depth, border, format, type, (void*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -4380,8 +4502,10 @@ namespace lime {
 
 	void lime_gl_tex_storage_2d (int target, int level, int internalformat, int width, int height) {
 
-		#ifdef LIME_GLES3_API
-		glTexStorage2D (target, level, internalformat, width, height);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glTexStorage2D) {
+			glTexStorage2D (target, level, internalformat, width, height);
+		}
 		#endif
 
 	}
@@ -4389,8 +4513,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_tex_storage_2d) (int target, int level, int internalformat, int width, int height) {
 
-		#ifdef LIME_GLES3_API
-		glTexStorage2D (target, level, internalformat, width, height);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glTexStorage2D) {
+			glTexStorage2D (target, level, internalformat, width, height);
+		}
 		#endif
 
 	}
@@ -4398,8 +4524,10 @@ namespace lime {
 
 	void lime_gl_tex_storage_3d (int target, int level, int internalformat, int width, int height, int depth) {
 
-		#ifdef LIME_GLES3_API
-		glTexStorage3D (target, level, internalformat, width, height, depth);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glTexStorage3D) {
+			glTexStorage3D (target, level, internalformat, width, height, depth);
+		}
 		#endif
 
 	}
@@ -4407,8 +4535,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_tex_storage_3d) (int target, int level, int internalformat, int width, int height, int depth) {
 
-		#ifdef LIME_GLES3_API
-		glTexStorage3D (target, level, internalformat, width, height, depth);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glTexStorage3D) {
+			glTexStorage3D (target, level, internalformat, width, height, depth);
+		}
 		#endif
 
 	}
@@ -4430,8 +4560,10 @@ namespace lime {
 
 	void lime_gl_tex_sub_image_3d (int target, int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, int format, int type, double data) {
 
-		#ifdef LIME_GLES3_API
-		glTexSubImage3D (target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, (void*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glTexSubImage3D) {
+			glTexSubImage3D (target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, (void*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -4439,8 +4571,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_tex_sub_image_3d) (int target, int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, int format, int type, double data) {
 
-		#ifdef LIME_GLES3_API
-		glTexSubImage3D (target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, (void*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glTexSubImage3D) {
+			glTexSubImage3D (target, level, xoffset, yoffset, zoffset, width, height, depth, format, type, (void*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -5062,8 +5196,10 @@ namespace lime {
 
 	void lime_gl_vertex_attrib_divisor (int index, int divisor) {
 
-		#ifdef LIME_GLES3_API
-		glVertexAttribDivisor (index, divisor);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glVertexAttribDivisor) {
+			glVertexAttribDivisor (index, divisor);
+		}
 		#endif
 
 	}
@@ -5071,8 +5207,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_vertex_attrib_divisor) (int index, int divisor) {
 
-		#ifdef LIME_GLES3_API
-		glVertexAttribDivisor (index, divisor);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glVertexAttribDivisor) {
+			glVertexAttribDivisor (index, divisor);
+		}
 		#endif
 
 	}
