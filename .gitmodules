@@ -82,3 +82,7 @@
 	path = project/lib/hashlink
 	url = https://github.com/HaxeFoundation/hashlink
 	shallow = true
+[submodule "project/lib/minimp3"]
+	path = project/lib/minimp3
+	url = https://github.com/lieff/minimp3
+	shallow = true
