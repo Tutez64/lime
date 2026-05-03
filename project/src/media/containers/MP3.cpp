@@ -46,45 +46,42 @@ namespace lime {
         mp3dec_t decoder;
         mp3dec_init (&decoder);
 
-        mp3d_sample_t *pcmData = NULL;
-        size_t decodedSamples = 0;
-        int channels = 0;
-        int sampleRate = 0;
+        mp3dec_file_info_t info = { 0 };
+        int result = mp3dec_load_buf (&decoder, inputData, inputLength, &info, NULL, NULL);
 
-        int result = mp3dec_load (&decoder, inputData, inputLength, &pcmData, &decodedSamples, &channels, &sampleRate);
+        if (result != 0 || !info.buffer || info.samples == 0 || info.channels <= 0 || info.hz <= 0) {
 
-        if (result != 0 || !pcmData || decodedSamples == 0 || channels <= 0 || sampleRate <= 0) {
-
-            if (pcmData) {
-                free (pcmData);
+            if (info.buffer) {
+                free (info.buffer);
             }
 
             return false;
 
         }
 
-        int byteLength = (int)(decodedSamples * sizeof (mp3d_sample_t));
+        int byteLength = info.samples * static_cast<int>(sizeof (mp3d_sample_t));
 
         Bytes *decodedBytes = new Bytes ();
         decodedBytes->Resize (byteLength);
-        memcpy (decodedBytes->b, pcmData, byteLength);
+        memcpy (decodedBytes->b, info.buffer, byteLength);
 
         if (audioBuffer->data) {
             delete audioBuffer->data;
         }
 
-        audioBuffer->data = new ArrayBufferView (alloc_empty_object ());
-        delete audioBuffer->data->buffer;
+        audioBuffer->data = new ArrayBufferView (alloc_null ());
+        audioBuffer->data->type = 1;
+        audioBuffer->data->byteOffset = 0;
         audioBuffer->data->buffer = decodedBytes;
         audioBuffer->data->byteLength = byteLength;
         audioBuffer->data->length = byteLength;
         audioBuffer->data->bytesPerElement = 1;
 
-        audioBuffer->sampleRate = sampleRate;
-        audioBuffer->channels = channels;
+        audioBuffer->sampleRate = info.hz;
+        audioBuffer->channels = info.channels;
         audioBuffer->bitsPerSample = 16;
 
-        free (pcmData);
+        free (info.buffer);
 
         return true;
 
