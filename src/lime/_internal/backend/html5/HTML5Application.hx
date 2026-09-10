@@ -276,7 +276,7 @@ class HTML5Application
 
 	public function configureFrameTiming(profile:FrameProfile, frameRate:Float, options:FrameOptions):Void
 	{
-		if (frameRate >= 60)
+		if (frameRate == 0 || frameRate >= 60)
 		{
 			framePeriod = -1;
 		}
