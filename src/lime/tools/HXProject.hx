@@ -1400,7 +1400,6 @@ class HXProject extends Script
 				else if (!StringTools.startsWith(arg, "-"))
 				{
 					var path = StringTools.trim(Path.standardize(arg));
-					path = path != null ? StringTools.trim(path) : "";
 
 					if (path != "" && !StringTools.startsWith(path, "#"))
 					{
