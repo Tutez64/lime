@@ -1343,34 +1343,62 @@ class HXProject extends Script
 
 			// #if lime
 
-			var args:Array<String> = [];
-
 			if (Haxelib.pathOverrides.exists(name))
 			{
-				// imitate the output of `haxelib path`, so it can be parsed the
-				// same way
-
 				var path = Haxelib.pathOverrides.get(name);
 				var jsonPath = Path.combine(path, "haxelib.json");
+				var added = false;
 				var extraParamsPath = Path.combine(path, "extraParams.hxml");
+				var haxelibName:String = null;
 
-				// `haxelib path` starts with the contents of extraParams.hxml
 				try
 				{
-					if (FileSystem.exists(extraParamsPath))
+					if (FileSystem.exists(jsonPath))
 					{
-						var hxmlContents = File.getContent(extraParamsPath);
-						args = hxmlContents.split("\n");
+						var json = Json.parse(File.getContent(jsonPath));
+						if (Reflect.hasField(json, "classPath"))
+						{
+							path = Path.combine(path, json.classPath);
+						}
+
+						haxelibName = json.name;
+						compilerFlags = ArrayTools.concatUnique(compilerFlags, ["-D " + haxelibName + "=" + json.version], true);
 					}
 				}
 				catch (e:Dynamic) {}
 
-				// next is the library path on a separate line
-				args.push(path);
+				var param = "-cp " + path;
+				compilerFlags.remove(param);
+				compilerFlags.push(param);
 
-				// `haxelib path` would add a final define, but the code below
-				// filters it out, so it isn't worth including
-				// args.push("-D " + haxelibName + "=" + haxelibVersion);
+				try
+				{
+					if (FileSystem.exists(extraParamsPath))
+					{
+						for (line in File.getContent(extraParamsPath).split("\n"))
+						{
+							var arg = StringTools.trim(line);
+
+							if (arg != "" && StringTools.startsWith(arg, "-") && !StringTools.startsWith(arg, "-L"))
+							{
+								if (StringTools.startsWith(arg, "-D ") && arg.indexOf("=") == -1)
+								{
+									var defineName = arg.substr(3);
+
+									if (defineName != haxelibName)
+									{
+										compilerFlags = ArrayTools.concatUnique(compilerFlags, ["-D " + defineName], true);
+									}
+								}
+								else
+								{
+									compilerFlags = ArrayTools.concatUnique(compilerFlags, [arg], true);
+								}
+							}
+						}
+					}
+				}
+				catch (e:Dynamic) {}
 			}
 			else
 			{
@@ -1379,75 +1407,71 @@ class HXProject extends Script
 				var output = Haxelib.runProcess("", ["path", name], true, true, true);
 				Log.verbose = cache;
 
-				if (output != null) args = output.split("\n");
-			}
+				var split = output != null ? output.split("\n") : [];
+				var haxelibName:String = null;
 
-			var haxelibName:String = null;
-
-			for (arg in args)
-			{
-				arg = StringTools.trim(arg);
-
-				if (arg == "")
+				for (arg in split)
 				{
-					continue;
-				}
+					arg = StringTools.trim(arg);
 
-				if (StringTools.startsWith(arg, "Error: "))
-				{
-					Log.error(arg.substr(7));
-				}
-				else if (!StringTools.startsWith(arg, "-"))
-				{
-					var path = StringTools.trim(Path.standardize(arg));
-					path = path != null ? StringTools.trim(path) : "";
-
-					if (path != "" && !StringTools.startsWith(path, "#"))
+					if (arg != "")
 					{
-						var param = "-cp " + path;
-						compilerFlags.remove(param);
-						compilerFlags.push(param);
-					}
-
-					var version = "0.0.0";
-					var jsonPath = Path.combine(path, "haxelib.json");
-
-					try
-					{
-						if (FileSystem.exists(jsonPath))
+						if (StringTools.startsWith(arg, "Error: "))
 						{
-							var json = Json.parse(File.getContent(jsonPath));
-							haxelibName = json.name;
-							compilerFlags = ArrayTools.concatUnique(compilerFlags, ["-D " + haxelibName + "=" + json.version], true);
+							Log.error(arg.substr(7));
 						}
-					}
-					catch (e:Dynamic) {}
-				}
-				else
-				{
-					if (StringTools.startsWith(arg, "-D ") && arg.indexOf("=") == -1)
-					{
-						var name = arg.substr(3);
-
-						if (name != haxelibName)
+						else if (!StringTools.startsWith(arg, "-"))
 						{
-							compilerFlags = ArrayTools.concatUnique(compilerFlags, ["-D " + name], true);
+							var path = Path.standardize(arg);
+
+							if (path != null && StringTools.trim(path) != "" && !StringTools.startsWith(StringTools.trim(path), "#"))
+							{
+								var param = "-cp " + path;
+								compilerFlags.remove(param);
+								compilerFlags.push(param);
+							}
+
+							var version = "0.0.0";
+							var jsonPath = Path.combine(path, "haxelib.json");
+
+							try
+							{
+								if (FileSystem.exists(jsonPath))
+								{
+									var json = Json.parse(File.getContent(jsonPath));
+									haxelibName = json.name;
+									compilerFlags = ArrayTools.concatUnique(compilerFlags, ["-D " + haxelibName + "=" + json.version], true);
+								}
+							}
+							catch (e:Dynamic) {}
 						}
+						else
+						{
+							if (StringTools.startsWith(arg, "-D ") && arg.indexOf("=") == -1)
+							{
+								var name = arg.substr(3);
 
-						/*var haxelib = new Haxelib (arg.substr (3));
-							var path = Haxelib.getPath (haxelib);
-							var version = getHaxelibVersion (haxelib);
+								if (name != haxelibName)
+								{
+									compilerFlags = ArrayTools.concatUnique(compilerFlags, ["-D " + name], true);
+								}
 
-							if (path != null) {
+								/*var haxelib = new Haxelib (arg.substr (3));
+									var path = Haxelib.getPath (haxelib);
+									var version = getHaxelibVersion (haxelib);
 
-								CompatibilityHelper.patchProject (this, haxelib, version);
-								compilerFlags = ArrayTools.concatUnique (compilerFlags, [ "-D " + haxelib.name + "=" + version ], true);
+									if (path != null) {
 
-						}*/
-					}
-					else if (!StringTools.startsWith(arg, "-L"))
-					{
-						compilerFlags = ArrayTools.concatUnique(compilerFlags, [arg], true);
+										CompatibilityHelper.patchProject (this, haxelib, version);
+										compilerFlags = ArrayTools.concatUnique (compilerFlags, [ "-D " + haxelib.name + "=" + version ], true);
+
+								}*/
+							}
+							else if (!StringTools.startsWith(arg, "-L"))
+							{
+								compilerFlags = ArrayTools.concatUnique(compilerFlags, [arg], true);
+							}
+						}
 					}
 				}
 			}
