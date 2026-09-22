@@ -1348,8 +1348,6 @@ class HXProject extends Script
 				var path = Haxelib.pathOverrides.get(name);
 				var jsonPath = Path.combine(path, "haxelib.json");
 				var added = false;
-				var extraParamsPath = Path.combine(path, "extraParams.hxml");
-				var haxelibName:String = null;
 
 				try
 				{
@@ -1361,7 +1359,7 @@ class HXProject extends Script
 							path = Path.combine(path, json.classPath);
 						}
 
-						haxelibName = json.name;
+						var haxelibName = json.name;
 						compilerFlags = ArrayTools.concatUnique(compilerFlags, ["-D " + haxelibName + "=" + json.version], true);
 					}
 				}
@@ -1370,35 +1368,6 @@ class HXProject extends Script
 				var param = "-cp " + path;
 				compilerFlags.remove(param);
 				compilerFlags.push(param);
-
-				try
-				{
-					if (FileSystem.exists(extraParamsPath))
-					{
-						for (line in File.getContent(extraParamsPath).split("\n"))
-						{
-							var arg = StringTools.trim(line);
-
-							if (arg != "" && StringTools.startsWith(arg, "-") && !StringTools.startsWith(arg, "-L"))
-							{
-								if (StringTools.startsWith(arg, "-D ") && arg.indexOf("=") == -1)
-								{
-									var defineName = arg.substr(3);
-
-									if (defineName != haxelibName)
-									{
-										compilerFlags = ArrayTools.concatUnique(compilerFlags, ["-D " + defineName], true);
-									}
-								}
-								else
-								{
-									compilerFlags = ArrayTools.concatUnique(compilerFlags, [arg], true);
-								}
-							}
-						}
-					}
-				}
-				catch (e:Dynamic) {}
 			}
 			else
 			{
