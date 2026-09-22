@@ -1365,23 +1365,11 @@ class HXProject extends Script
 				}
 				catch (e:Dynamic) {}
 
-				// next it prints the class path
-				try
-				{
-					if (FileSystem.exists(jsonPath))
-					{
-						var json = Json.parse(File.getContent(jsonPath));
-						if (json != null && json.classPath != null && json.classPath != "")
-						{
-							path = Path.addTrailingSlash(Path.combine(path, json.classPath));
-						}
-					}
-				}
-				catch (e:Dynamic) {}
+				// next is the library path on a separate line
 				args.push(path);
 
-				// finally it would print a haxedef for the library, but we
-				// filter it out
+				// `haxelib path` would add a final define, but the code below
+				// filters it out, so it isn't worth including
 				// args.push("-D " + haxelibName + "=" + haxelibVersion);
 			}
 			else
