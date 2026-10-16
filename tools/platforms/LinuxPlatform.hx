@@ -620,14 +620,14 @@ class LinuxPlatform extends PlatformTarget
 			ProjectHelper.recursiveSmartCopyTemplate(project, "cpp/static", targetDirectory + "/obj", context);
 		}
 
-        var icons = project.icons;
+		var icons = project.icons;
 
-        if (icons.length == 0)
-        {
-            icons = [new Icon(System.findTemplate(project.templatePaths, "default/icon.svg"))];
-        }
+		if (icons.length == 0)
+		{
+			icons = [new Icon(System.findTemplate(project.templatePaths, "default/icon.svg"))];
+		}
 
-        context.HAS_ICON = IconHelper.createIcon(icons, 256, 256, Path.combine(applicationDirectory, "icon.png"));
+		context.HAS_ICON = IconHelper.createIcon(icons, 256, 256, Path.combine(applicationDirectory, "icon.png"));
 
 		copyProjectAssets(applicationDirectory);
 	}

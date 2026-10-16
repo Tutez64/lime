@@ -9,6 +9,9 @@
 #include <system/CFFI.h>
 
 #include <app/Application.h>
+#ifdef LIME_SDL
+#include "backend/sdl/SDLApplication.h"
+#endif
 #include <app/ApplicationEvent.h>
 #include <graphics/format/JPEG.h>
 #include <graphics/format/PNG.h>
@@ -34,6 +37,7 @@
 #include <system/System.h>
 #include <text/Font.h>
 #include <ui/Cursor.h>
+#include <ui/DockIcon.h>
 #include <ui/DropEvent.h>
 #include <ui/FileDialog.h>
 #include <ui/Gamepad.h>
@@ -43,9 +47,13 @@
 #include <ui/JoystickEvent.h>
 #include <ui/KeyCode.h>
 #include <ui/KeyEvent.h>
+#include <ui/Menu.h>
+#include <ui/MenuEvent.h>
 #include <ui/MouseEvent.h>
 #include <ui/TextEvent.h>
 #include <ui/TouchEvent.h>
+#include <ui/TrayIcon.h>
+#include <ui/TrayIconEvent.h>
 #include <ui/Window.h>
 #include <ui/WindowEvent.h>
 #include <utils/compress/LZMA.h>
@@ -1294,6 +1302,22 @@ namespace lime {
 	}
 
 
+	void gc_tray_icon (value handle) {
+
+		TrayIcon* trayIcon = (TrayIcon*)val_data (handle);
+		delete trayIcon;
+
+	}
+
+
+	void hl_gc_tray_icon (HL_CFFIPointer* handle) {
+
+		TrayIcon* trayIcon = (TrayIcon*)handle->ptr;
+		delete trayIcon;
+
+	}
+
+
 	void gc_window (value handle) {
 
 		Window* window = (Window*)val_data (handle);
@@ -1424,6 +1448,20 @@ namespace lime {
 	}
 	#endif
 
+	void lime_application_allow_high_dpi () {
+
+		AllowHighDPI ();
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_application_allow_high_dpi) () {
+
+		AllowHighDPI ();
+
+	}
+
+
 	value lime_application_create () {
 
 		Application* application = CreateApplication ();
@@ -1504,6 +1542,30 @@ namespace lime {
 	}
 
 
+	void lime_application_set_modal_callbacks (value application, value update, value render, value window, value rethrow) {
+#if defined(LIME_SDL) && defined(HX_WINDOWS) && !defined(HX_WINRT)
+		((SDLApplication*)val_data(application))->SetModalCallbacks(new ValuePointer(update), new ValuePointer(render), new ValuePointer(window), new ValuePointer(rethrow));
+#endif
+	}
+
+	HL_PRIM void HL_NAME(hl_application_set_modal_callbacks) (HL_CFFIPointer* application, vclosure* update, vclosure* render, vclosure* window, vclosure* rethrow) {
+#if defined(LIME_SDL) && defined(HX_WINDOWS) && !defined(HX_WINRT)
+		((SDLApplication*)application->ptr)->SetModalCallbacks(new ValuePointer(update), new ValuePointer(render), new ValuePointer(window), new ValuePointer(rethrow));
+#endif
+	}
+
+	void lime_application_defer_modal_exception (value application) {
+#if defined(LIME_SDL) && defined(HX_WINDOWS) && !defined(HX_WINRT)
+		((SDLApplication*)val_data(application))->DeferModalException();
+#endif
+	}
+
+	HL_PRIM void HL_NAME(hl_application_defer_modal_exception) (HL_CFFIPointer* application) {
+#if defined(LIME_SDL) && defined(HX_WINDOWS) && !defined(HX_WINRT)
+		((SDLApplication*)application->ptr)->DeferModalException();
+#endif
+	}
+
 	void lime_application_set_frame_rate (value application, double frameRate) {
 
 		Application* app = (Application*)val_data (application);
@@ -1516,6 +1578,23 @@ namespace lime {
 
 		Application* app = (Application*)application->ptr;
 		app->SetFrameRate (frameRate);
+
+	}
+
+
+	bool lime_application_set_menu (value application, value data) {
+
+		Application* app = (Application*)val_data (application);
+		Bytes bytes (data);
+		return app->SetMenu (bytes.b, bytes.length);
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_application_set_menu) (HL_CFFIPointer* application, Bytes* data) {
+
+		Application* app = (Application*)application->ptr;
+		return app->SetMenu (data ? data->b : 0, data ? data->length : 0);
 
 	}
 
@@ -1964,6 +2043,71 @@ namespace lime {
 		#else
 		return 0;
 		#endif
+
+	}
+
+
+	void lime_dock_icon_bounce (bool critical) {
+
+		DockIcon::Bounce (critical);
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_dock_icon_bounce) (bool critical) {
+
+		DockIcon::Bounce (critical);
+
+	}
+
+
+	bool lime_dock_icon_is_supported () {
+
+		return DockIcon::IsSupported ();
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_dock_icon_is_supported) () {
+
+		return DockIcon::IsSupported ();
+
+	}
+
+
+	void lime_dock_icon_set_icon (value buffer) {
+
+		if (val_is_null (buffer)) {
+
+			DockIcon::SetIcon (NULL);
+			return;
+
+		}
+
+		ImageBuffer imageBuffer = ImageBuffer (buffer);
+		DockIcon::SetIcon (&imageBuffer);
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_dock_icon_set_icon) (ImageBuffer* buffer) {
+
+		DockIcon::SetIcon (buffer);
+
+	}
+
+
+	bool lime_dock_icon_set_menu (value data) {
+
+		Bytes bytes (data);
+		return DockIcon::SetMenu (bytes.b, bytes.length);
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_dock_icon_set_menu) (Bytes* data) {
+
+		return DockIcon::SetMenu (data ? data->b : 0, data ? data->length : 0);
 
 	}
 
@@ -2868,12 +3012,17 @@ namespace lime {
 
 	HL_PRIM Bytes* HL_NAME(hl_font_render_glyphs) (HL_CFFIPointer* fontHandle, hl_varray* indices, Bytes* data) {
 
-		// #ifdef LIME_FREETYPE
-		// Font *font = (Font*)fontHandle->ptr;
-		// return font->RenderGlyphs (indices, &bytes);
-		// #else
+		#ifdef LIME_FREETYPE
+		Font *font = (Font*)fontHandle->ptr;
+
+		if (font->RenderGlyphs (indices, data)) {
+
+			return data;
+
+		}
+		#endif
+
 		return NULL;
-		// #endif
 
 	}
 
@@ -2893,6 +3042,71 @@ namespace lime {
 		#ifdef LIME_FREETYPE
 		Font *font = (Font*)fontHandle->ptr;
 		font->SetSize (fontSize, dpi);
+		#endif
+
+	}
+
+
+	void lime_font_set_stem_darkening (value fontHandle, bool enable) {
+
+		#ifdef LIME_FREETYPE
+		Font *font = (Font*)val_data (fontHandle);
+		font->SetStemDarkening (enable);
+		#endif
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_font_set_stem_darkening) (HL_CFFIPointer* fontHandle, bool enable) {
+
+		#ifdef LIME_FREETYPE
+		Font *font = (Font*)fontHandle->ptr;
+		font->SetStemDarkening (enable);
+		#endif
+
+	}
+
+
+	void lime_font_set_stem_darkening_parameters (value fontHandle, value params) {
+
+		#ifdef LIME_FREETYPE
+		int length = val_array_size (params);
+		if (length != 8)
+		{
+			return;
+		}
+
+		int darkeningParams[8] = {
+			val_int (val_array_i (params, 0)),
+			val_int (val_array_i (params, 1)),
+			val_int (val_array_i (params, 2)),
+			val_int (val_array_i (params, 3)),
+			val_int (val_array_i (params, 4)),
+			val_int (val_array_i (params, 5)),
+			val_int (val_array_i (params, 6)),
+			val_int (val_array_i (params, 7))
+		};
+
+		Font *font = (Font*)val_data (fontHandle);
+		font->SetStemDarkeningParameters(darkeningParams);
+		#endif
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_font_set_stem_darkening_parameters) (HL_CFFIPointer* fontHandle, hl_varray* params) {
+
+		#ifdef LIME_FREETYPE
+		int length = params->size;
+		if (length != 8)
+		{
+			return;
+		}
+
+		int* paramValues = hl_aptr (params, int);
+
+		Font *font = (Font*)fontHandle->ptr;
+		font->SetStemDarkeningParameters(paramValues);
 		#endif
 
 	}
@@ -3002,6 +3216,66 @@ namespace lime {
 	HL_PRIM void HL_NAME(hl_gamepad_rumble) (int id, double lowFrequencyRumble, double highFrequencyRumble, int duration) {
 
 		Gamepad::Rumble (id, lowFrequencyRumble, highFrequencyRumble, duration);
+
+	}
+
+
+	int lime_gamepad_get_type (int id) { return Gamepad::GetType (id); }
+	HL_PRIM int HL_NAME(hl_gamepad_get_type) (int id) { return Gamepad::GetType (id); }
+
+	bool lime_gamepad_has_led (int id) { return Gamepad::HasLED (id); }
+	HL_PRIM bool HL_NAME(hl_gamepad_has_led) (int id) { return Gamepad::HasLED (id); }
+
+	bool lime_gamepad_has_rumble_triggers (int id) { return Gamepad::HasRumbleTriggers (id); }
+	HL_PRIM bool HL_NAME(hl_gamepad_has_rumble_triggers) (int id) { return Gamepad::HasRumbleTriggers (id); }
+
+	bool lime_gamepad_has_sensor (int id, int sensor) { return Gamepad::HasSensor (id, sensor); }
+	HL_PRIM bool HL_NAME(hl_gamepad_has_sensor) (int id, int sensor) { return Gamepad::HasSensor (id, sensor); }
+
+	bool lime_gamepad_rumble_triggers (int id, double leftRumble, double rightRumble, int duration) { return Gamepad::RumbleTriggers (id, leftRumble, rightRumble, duration); }
+	HL_PRIM bool HL_NAME(hl_gamepad_rumble_triggers) (int id, double leftRumble, double rightRumble, int duration) { return Gamepad::RumbleTriggers (id, leftRumble, rightRumble, duration); }
+
+	bool lime_gamepad_set_led (int id, int red, int green, int blue) { return Gamepad::SetLED (id, red, green, blue); }
+	HL_PRIM bool HL_NAME(hl_gamepad_set_led) (int id, int red, int green, int blue) { return Gamepad::SetLED (id, red, green, blue); }
+
+	bool lime_gamepad_set_sensor_enabled (int id, int sensor, bool enabled) { return Gamepad::SetSensorEnabled (id, sensor, enabled); }
+	HL_PRIM bool HL_NAME(hl_gamepad_set_sensor_enabled) (int id, int sensor, bool enabled) { return Gamepad::SetSensorEnabled (id, sensor, enabled); }
+
+	int lime_gamepad_attach_virtual () { return Gamepad::AttachVirtual (); }
+	HL_PRIM int HL_NAME(hl_gamepad_attach_virtual) () { return Gamepad::AttachVirtual (); }
+
+	void lime_gamepad_detach_virtual (int id) { Gamepad::DetachVirtual (id); }
+	HL_PRIM void HL_NAME(hl_gamepad_detach_virtual) (int id) { Gamepad::DetachVirtual (id); }
+
+
+	value lime_gamepad_get_virtual_output (int id) {
+
+		int led, lowRumble, highRumble, leftRumble, rightRumble;
+		if (!Gamepad::GetVirtualOutput (id, &led, &lowRumble, &highRumble, &leftRumble, &rightRumble)) return alloc_null ();
+
+		value output = alloc_empty_object ();
+		alloc_field (output, val_id ("led"), alloc_int (led));
+		alloc_field (output, val_id ("lowRumble"), alloc_int (lowRumble));
+		alloc_field (output, val_id ("highRumble"), alloc_int (highRumble));
+		alloc_field (output, val_id ("leftRumble"), alloc_int (leftRumble));
+		alloc_field (output, val_id ("rightRumble"), alloc_int (rightRumble));
+		return output;
+
+	}
+
+
+	HL_PRIM vdynamic* HL_NAME(hl_gamepad_get_virtual_output) (int id) {
+
+		int led, lowRumble, highRumble, leftRumble, rightRumble;
+		if (!Gamepad::GetVirtualOutput (id, &led, &lowRumble, &highRumble, &leftRumble, &rightRumble)) return NULL;
+
+		vdynamic* output = (vdynamic*)hl_alloc_dynobj ();
+		hl_dyn_seti (output, hl_hash_utf8 ("led"), &hlt_i32, led);
+		hl_dyn_seti (output, hl_hash_utf8 ("lowRumble"), &hlt_i32, lowRumble);
+		hl_dyn_seti (output, hl_hash_utf8 ("highRumble"), &hlt_i32, highRumble);
+		hl_dyn_seti (output, hl_hash_utf8 ("leftRumble"), &hlt_i32, leftRumble);
+		hl_dyn_seti (output, hl_hash_utf8 ("rightRumble"), &hlt_i32, rightRumble);
+		return output;
 
 	}
 
@@ -3780,6 +4054,28 @@ namespace lime {
 	}
 
 
+	value lime_locale_get_preferred_locales () {
+
+		std::string* locales = Locale::GetPreferredLocales ();
+		value result = alloc_string (locales->c_str ());
+		delete locales;
+		return result;
+
+	}
+
+
+	HL_PRIM vbyte* HL_NAME(hl_locale_get_preferred_locales) () {
+
+		std::string* locales = Locale::GetPreferredLocales ();
+		int size = locales->size ();
+		vbyte* result = hl_alloc_bytes (size + 1);
+		memcpy (result, locales->c_str (), size + 1);
+		delete locales;
+		return result;
+
+	}
+
+
 	HL_PRIM vbyte* HL_NAME(hl_locale_get_system_locale) () {
 
 		std::string* locale = Locale::GetSystemLocale ();
@@ -3855,6 +4151,36 @@ namespace lime {
 		#else
 		return 0;
 		#endif
+
+	}
+
+
+	int lime_menu_get_support () {
+
+		return Menu::GetSupport ();
+
+	}
+
+
+	HL_PRIM int HL_NAME(hl_menu_get_support) () {
+
+		return Menu::GetSupport ();
+
+	}
+
+
+	void lime_menu_event_manager_register (value callback, value eventObject) {
+
+		MenuEvent::callback = new ValuePointer (callback);
+		MenuEvent::eventObject = new ValuePointer (eventObject);
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_menu_event_manager_register) (vclosure* callback, MenuEvent* eventObject) {
+
+		MenuEvent::callback = new ValuePointer (callback);
+		MenuEvent::eventObject = new ValuePointer ((vobj*)eventObject);
 
 	}
 
@@ -4457,6 +4783,159 @@ namespace lime {
 
 		TouchEvent::callback = new ValuePointer (callback);
 		TouchEvent::eventObject = new ValuePointer ((vobj*)eventObject);
+
+	}
+
+
+	void lime_tray_icon_close (value trayIcon) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)val_data (trayIcon);
+		targetTrayIcon->Close ();
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_tray_icon_close) (HL_CFFIPointer* trayIcon) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)trayIcon->ptr;
+		targetTrayIcon->Close ();
+
+	}
+
+
+	value lime_tray_icon_create () {
+
+		TrayIcon* trayIcon = CreateTrayIcon ();
+		return CFFIPointer (trayIcon, gc_tray_icon);
+
+	}
+
+
+	HL_PRIM HL_CFFIPointer* HL_NAME(hl_tray_icon_create) () {
+
+		TrayIcon* trayIcon = CreateTrayIcon ();
+		return HLCFFIPointer (trayIcon, (hl_finalizer)hl_gc_tray_icon);
+
+	}
+
+
+	void lime_tray_icon_event_manager_register (value callback, value eventObject) {
+
+		TrayIconEvent::callback = new ValuePointer (callback);
+		TrayIconEvent::eventObject = new ValuePointer (eventObject);
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_tray_icon_event_manager_register) (vclosure* callback, TrayIconEvent* eventObject) {
+
+		TrayIconEvent::callback = new ValuePointer (callback);
+		TrayIconEvent::eventObject = new ValuePointer ((vobj*)eventObject);
+
+	}
+
+
+	int lime_tray_icon_get_id (value trayIcon) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)val_data (trayIcon);
+		return targetTrayIcon->GetID ();
+
+	}
+
+
+	HL_PRIM int HL_NAME(hl_tray_icon_get_id) (HL_CFFIPointer* trayIcon) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)trayIcon->ptr;
+		return targetTrayIcon->GetID ();
+
+	}
+
+
+	bool lime_tray_icon_is_supported () {
+
+		return TrayIcon::IsSupported ();
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_tray_icon_is_supported) () {
+
+		return TrayIcon::IsSupported ();
+
+	}
+
+
+	int lime_tray_icon_popup_menu (value trayIcon, value data) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)val_data (trayIcon);
+		Bytes bytes (data);
+		return targetTrayIcon->PopupMenu (bytes.b, bytes.length);
+
+	}
+
+
+	HL_PRIM int HL_NAME(hl_tray_icon_popup_menu) (HL_CFFIPointer* trayIcon, Bytes* data) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)trayIcon->ptr;
+		return targetTrayIcon->PopupMenu (data ? data->b : 0, data ? data->length : 0);
+
+	}
+
+
+	void lime_tray_icon_set_icon (value trayIcon, value buffer) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)val_data (trayIcon);
+
+		if (val_is_null (buffer)) {
+
+			targetTrayIcon->SetIcon (NULL);
+			return;
+
+		}
+
+		ImageBuffer imageBuffer = ImageBuffer (buffer);
+		targetTrayIcon->SetIcon (&imageBuffer);
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_tray_icon_set_icon) (HL_CFFIPointer* trayIcon, ImageBuffer* buffer) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)trayIcon->ptr;
+		targetTrayIcon->SetIcon (buffer);
+
+	}
+
+
+	bool lime_tray_icon_set_menu (value trayIcon, value data) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)val_data (trayIcon);
+		Bytes bytes (data);
+		return targetTrayIcon->SetMenu (bytes.b, bytes.length);
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_tray_icon_set_menu) (HL_CFFIPointer* trayIcon, Bytes* data) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)trayIcon->ptr;
+		return targetTrayIcon->SetMenu (data ? data->b : 0, data ? data->length : 0);
+
+	}
+
+
+	void lime_tray_icon_set_tooltip (value trayIcon, HxString tooltip) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)val_data (trayIcon);
+		targetTrayIcon->SetTooltip (tooltip.c_str ());
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_tray_icon_set_tooltip) (HL_CFFIPointer* trayIcon, hl_vstring* tooltip) {
+
+		TrayIcon* targetTrayIcon = (TrayIcon*)trayIcon->ptr;
+		targetTrayIcon->SetTooltip (tooltip ? (const char*)hl_to_utf8 ((const uchar*)tooltip->bytes) : NULL);
 
 	}
 
@@ -12822,6 +13301,22 @@ namespace lime {
 	}
 
 
+	bool lime_window_get_transparent (value window) {
+
+		Window* targetWindow = (Window*)val_data (window);
+		return targetWindow->GetTransparent ();
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_window_get_transparent) (HL_CFFIPointer* window) {
+
+		Window* targetWindow = (Window*)window->ptr;
+		return targetWindow->GetTransparent ();
+
+	}
+
+
 	double lime_window_get_opacity (value window) {
 
 		Window* targetWindow = (Window*)val_data (window);
@@ -12930,6 +13425,23 @@ namespace lime {
 
 		Window* targetWindow = (Window*)window->ptr;
 		targetWindow->Move (x, y);
+
+	}
+
+
+	int lime_window_popup_menu (value window, value data, int x, int y, bool atCursor) {
+
+		Window* targetWindow = (Window*)val_data (window);
+		Bytes bytes (data);
+		return targetWindow->PopupMenu (bytes.b, bytes.length, x, y, atCursor);
+
+	}
+
+
+	HL_PRIM int HL_NAME(hl_window_popup_menu) (HL_CFFIPointer* window, Bytes* data, int x, int y, bool atCursor) {
+
+		Window* targetWindow = (Window*)window->ptr;
+		return targetWindow->PopupMenu (data ? data->b : 0, data ? data->length : 0, x, y, atCursor);
 
 	}
 
@@ -13124,6 +13636,23 @@ namespace lime {
 	}
 
 
+	bool lime_window_set_menu (value window, value data) {
+
+		Window* targetWindow = (Window*)val_data (window);
+		Bytes bytes (data);
+		return targetWindow->SetMenu (bytes.b, bytes.length);
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_window_set_menu) (HL_CFFIPointer* window, Bytes* data) {
+
+		Window* targetWindow = (Window*)window->ptr;
+		return targetWindow->SetMenu (data ? data->b : 0, data ? data->length : 0);
+
+	}
+
+
 	bool lime_window_set_minimized (value window, bool minimized) {
 
 		Window* targetWindow = (Window*)val_data (window);
@@ -13136,6 +13665,112 @@ namespace lime {
 
 		Window* targetWindow = (Window*)window->ptr;
 		return targetWindow->SetMinimized (minimized);
+
+	}
+
+
+	bool lime_window_flash (value window, int mode) {
+
+		Window* targetWindow = (Window*)val_data (window);
+		return targetWindow->Flash (mode);
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_window_flash) (HL_CFFIPointer* window, int mode) {
+
+		Window* targetWindow = (Window*)window->ptr;
+		return targetWindow->Flash (mode);
+
+	}
+
+
+	bool lime_window_get_keyboard_grab (value window) {
+
+		Window* targetWindow = (Window*)val_data (window);
+		return targetWindow->GetKeyboardGrab ();
+
+	}
+
+
+	HL_PRIM bool HL_NAME(hl_window_get_keyboard_grab) (HL_CFFIPointer* window) {
+
+		Window* targetWindow = (Window*)window->ptr;
+		return targetWindow->GetKeyboardGrab ();
+
+	}
+
+
+	value lime_window_get_mouse_rect (value window) {
+
+		Window* targetWindow = (Window*)val_data (window);
+		int x, y, width, height;
+
+		if (!targetWindow->GetMouseRect (&x, &y, &width, &height)) {
+
+			return alloc_null ();
+
+		}
+
+		value rect = alloc_empty_object ();
+		alloc_field (rect, val_id ("x"), alloc_int (x));
+		alloc_field (rect, val_id ("y"), alloc_int (y));
+		alloc_field (rect, val_id ("width"), alloc_int (width));
+		alloc_field (rect, val_id ("height"), alloc_int (height));
+		return rect;
+
+	}
+
+
+	HL_PRIM vdynamic* HL_NAME(hl_window_get_mouse_rect) (HL_CFFIPointer* window) {
+
+		Window* targetWindow = (Window*)window->ptr;
+		int x, y, width, height;
+
+		if (!targetWindow->GetMouseRect (&x, &y, &width, &height)) {
+
+			return NULL;
+
+		}
+
+		vdynamic* rect = (vdynamic*)hl_alloc_dynobj ();
+		hl_dyn_seti (rect, hl_hash_utf8 ("x"), &hlt_i32, x);
+		hl_dyn_seti (rect, hl_hash_utf8 ("y"), &hlt_i32, y);
+		hl_dyn_seti (rect, hl_hash_utf8 ("width"), &hlt_i32, width);
+		hl_dyn_seti (rect, hl_hash_utf8 ("height"), &hlt_i32, height);
+		return rect;
+
+	}
+
+
+	void lime_window_set_keyboard_grab (value window, bool keyboardGrab) {
+
+		Window* targetWindow = (Window*)val_data (window);
+		targetWindow->SetKeyboardGrab (keyboardGrab);
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_window_set_keyboard_grab) (HL_CFFIPointer* window, bool keyboardGrab) {
+
+		Window* targetWindow = (Window*)window->ptr;
+		targetWindow->SetKeyboardGrab (keyboardGrab);
+
+	}
+
+
+	void lime_window_set_mouse_rect (value window, int x, int y, int width, int height) {
+
+		Window* targetWindow = (Window*)val_data (window);
+		targetWindow->SetMouseRect (x, y, width, height);
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_window_set_mouse_rect) (HL_CFFIPointer* window, int x, int y, int width, int height) {
+
+		Window* targetWindow = (Window*)window->ptr;
+		targetWindow->SetMouseRect (x, y, width, height);
 
 	}
 
@@ -13370,6 +14005,7 @@ namespace lime {
 	}
 
 
+	DEFINE_PRIME0v (lime_application_allow_high_dpi);
 	DEFINE_PRIME0 (lime_application_create);
 	DEFINE_PRIME2v (lime_application_event_manager_register);
 	DEFINE_PRIME1 (lime_application_exec);
@@ -13377,6 +14013,9 @@ namespace lime {
 	DEFINE_PRIME1 (lime_application_quit);
 	DEFINE_PRIME6v (lime_application_set_main_loop);
 	DEFINE_PRIME2v (lime_application_set_frame_rate);
+	DEFINE_PRIME5v (lime_application_set_modal_callbacks);
+	DEFINE_PRIME1v (lime_application_defer_modal_exception);
+	DEFINE_PRIME2 (lime_application_set_menu);
 	DEFINE_PRIME2v (lime_application_set_vsync_mode);
 	DEFINE_PRIME1 (lime_application_update);
 	DEFINE_PRIME2 (lime_audio_load);
@@ -13394,6 +14033,10 @@ namespace lime {
 	DEFINE_PRIME2 (lime_data_pointer_offset);
 	DEFINE_PRIME2 (lime_deflate_compress);
 	DEFINE_PRIME2 (lime_deflate_decompress);
+	DEFINE_PRIME1v (lime_dock_icon_bounce);
+	DEFINE_PRIME0 (lime_dock_icon_is_supported);
+	DEFINE_PRIME1v (lime_dock_icon_set_icon);
+	DEFINE_PRIME1 (lime_dock_icon_set_menu);
 	DEFINE_PRIME2v (lime_drop_event_manager_register);
 	DEFINE_PRIME3 (lime_file_dialog_open_directory);
 	DEFINE_PRIME3 (lime_file_dialog_open_file);
@@ -13427,11 +14070,23 @@ namespace lime {
 	DEFINE_PRIME4 (lime_font_render_glyph_with_flags);
 	DEFINE_PRIME3 (lime_font_render_glyphs);
 	DEFINE_PRIME3v (lime_font_set_size);
+	DEFINE_PRIME2v (lime_font_set_stem_darkening);
+	DEFINE_PRIME2v (lime_font_set_stem_darkening_parameters);
 	DEFINE_PRIME1v (lime_gamepad_add_mappings);
 	DEFINE_PRIME2v (lime_gamepad_event_manager_register);
 	DEFINE_PRIME1 (lime_gamepad_get_device_guid);
 	DEFINE_PRIME1 (lime_gamepad_get_device_name);
 	DEFINE_PRIME4v (lime_gamepad_rumble);
+	DEFINE_PRIME0 (lime_gamepad_attach_virtual);
+	DEFINE_PRIME1v (lime_gamepad_detach_virtual);
+	DEFINE_PRIME1 (lime_gamepad_get_type);
+	DEFINE_PRIME1 (lime_gamepad_get_virtual_output);
+	DEFINE_PRIME1 (lime_gamepad_has_led);
+	DEFINE_PRIME1 (lime_gamepad_has_rumble_triggers);
+	DEFINE_PRIME2 (lime_gamepad_has_sensor);
+	DEFINE_PRIME4 (lime_gamepad_rumble_triggers);
+	DEFINE_PRIME4 (lime_gamepad_set_led);
+	DEFINE_PRIME3 (lime_gamepad_set_sensor_enabled);
 	DEFINE_PRIME2 (lime_gzip_compress);
 	DEFINE_PRIME2 (lime_gzip_decompress);
 	DEFINE_PRIME2v (lime_haptic_vibrate);
@@ -13464,9 +14119,12 @@ namespace lime {
 	DEFINE_PRIME1 (lime_key_code_from_scan_code);
 	DEFINE_PRIME1 (lime_key_code_to_scan_code);
 	DEFINE_PRIME2v (lime_key_event_manager_register);
+	DEFINE_PRIME0 (lime_locale_get_preferred_locales);
 	DEFINE_PRIME0 (lime_locale_get_system_locale);
 	DEFINE_PRIME2 (lime_lzma_compress);
 	DEFINE_PRIME2 (lime_lzma_decompress);
+	DEFINE_PRIME2v (lime_menu_event_manager_register);
+	DEFINE_PRIME0 (lime_menu_get_support);
 	DEFINE_PRIME2v (lime_mouse_event_manager_register);
 	DEFINE_PRIME1v (lime_neko_execute);
 	DEFINE_PRIME2v (lime_orientation_event_manager_register);
@@ -13493,6 +14151,15 @@ namespace lime {
 	DEFINE_PRIME2 (lime_system_set_windows_console_mode);
 	DEFINE_PRIME2v (lime_text_event_manager_register);
 	DEFINE_PRIME2v (lime_touch_event_manager_register);
+	DEFINE_PRIME1v (lime_tray_icon_close);
+	DEFINE_PRIME0 (lime_tray_icon_create);
+	DEFINE_PRIME2v (lime_tray_icon_event_manager_register);
+	DEFINE_PRIME1 (lime_tray_icon_get_id);
+	DEFINE_PRIME0 (lime_tray_icon_is_supported);
+	DEFINE_PRIME2 (lime_tray_icon_popup_menu);
+	DEFINE_PRIME2v (lime_tray_icon_set_icon);
+	DEFINE_PRIME2 (lime_tray_icon_set_menu);
+	DEFINE_PRIME2v (lime_tray_icon_set_tooltip);
 	DEFINE_PRIME3v (lime_window_alert);
 	DEFINE_PRIME1v (lime_window_close);
 	DEFINE_PRIME1v (lime_window_context_flip);
@@ -13510,6 +14177,7 @@ namespace lime {
 	DEFINE_PRIME1 (lime_window_get_height);
 	DEFINE_PRIME1 (lime_window_get_id);
 	DEFINE_PRIME1 (lime_window_get_mouse_lock);
+	DEFINE_PRIME1 (lime_window_get_transparent);
 	DEFINE_PRIME1 (lime_window_get_scale);
 	DEFINE_PRIME1 (lime_window_get_text_input_enabled);
 	DEFINE_PRIME1 (lime_window_get_vulkan_drawable_size);
@@ -13624,6 +14292,7 @@ namespace lime {
 	DEFINE_PRIME1 (lime_window_get_x);
 	DEFINE_PRIME1 (lime_window_get_y);
 	DEFINE_PRIME3v (lime_window_move);
+	DEFINE_PRIME5 (lime_window_popup_menu);
 	DEFINE_PRIME3 (lime_window_read_pixels);
 	DEFINE_PRIME3v (lime_window_resize);
 	DEFINE_PRIME3v (lime_window_set_minimum_size);
@@ -13634,8 +14303,14 @@ namespace lime {
 	DEFINE_PRIME2 (lime_window_set_fullscreen);
 	DEFINE_PRIME2v (lime_window_set_icon);
 	DEFINE_PRIME2 (lime_window_set_maximized);
+	DEFINE_PRIME2 (lime_window_set_menu);
 	DEFINE_PRIME2 (lime_window_set_minimized);
+	DEFINE_PRIME2 (lime_window_flash);
+	DEFINE_PRIME1 (lime_window_get_keyboard_grab);
+	DEFINE_PRIME1 (lime_window_get_mouse_rect);
+	DEFINE_PRIME2v (lime_window_set_keyboard_grab);
 	DEFINE_PRIME2v (lime_window_set_mouse_lock);
+	DEFINE_PRIME5v (lime_window_set_mouse_rect);
 	DEFINE_PRIME2 (lime_window_set_resizable);
 	DEFINE_PRIME2v (lime_window_set_text_input_enabled);
 	DEFINE_PRIME2v (lime_window_set_text_input_rect);
@@ -13657,9 +14332,10 @@ namespace lime {
 	#define _TCLIPBOARD_EVENT _OBJ (_I32)
 	#define _TDISPLAYMODE _OBJ (_I32 _I32 _I32 _I32)
 	#define _TDROP_EVENT _OBJ (_BYTES _I32)
-	#define _TGAMEPAD_EVENT _OBJ (_I32 _I32 _I32 _I32 _F64 _I32)
+	#define _TGAMEPAD_EVENT _OBJ (_I32 _I32 _I32 _I32 _F64 _I32 _F64 _F64 _F64)
 	#define _TJOYSTICK_EVENT _OBJ (_I32 _I32 _I32 _I32 _F64 _F64)
 	#define _TKEY_EVENT _OBJ (_F64 _I32 _I32 _I32 _I32)
+	#define _TMENU_EVENT _OBJ (_I32 _I32 _I32)
 	#define _TMOUSE_EVENT _OBJ (_I32 _F64 _F64 _I32 _I32 _F64 _F64 _I32)
 	#define _TORIENTATION_EVENT _OBJ (_I32 _I32 _I32)
 	#define _TRECTANGLE _OBJ (_F64 _F64 _F64 _F64)
@@ -13667,6 +14343,7 @@ namespace lime {
 	#define _TSENSOR_EVENT _OBJ (_I32 _F64 _F64 _F64 _I32)
 	#define _TTEXT_EVENT _OBJ (_I32 _I32 _I32 _BYTES _I32 _I32)
 	#define _TTOUCH_EVENT _OBJ (_I32 _F64 _F64 _I32 _F64 _I32 _F64 _F64)
+	#define _TTRAY_ICON_EVENT _OBJ (_I32 _I32 _I32)
 	#define _TVECTOR2 _OBJ (_F64 _F64)
 	#define _TVORBISFILE _OBJ (_I32 _DYN)
 	#define _TWINDOW_EVENT _OBJ (_I32 _I32 _I32 _I32 _I32 _I32)
@@ -13681,6 +14358,7 @@ namespace lime {
 	#define _TARRAY2 _OBJ (_ARR)
 
 
+	DEFINE_HL_PRIM (_VOID, hl_application_allow_high_dpi, _NO_ARG);
 	DEFINE_HL_PRIM (_TCFFIPOINTER, hl_application_create, _NO_ARG);
 	DEFINE_HL_PRIM (_VOID, hl_application_event_manager_register, _FUN(_VOID, _NO_ARG) _TAPPLICATION_EVENT);
 	DEFINE_HL_PRIM (_I32, hl_application_exec, _TCFFIPOINTER);
@@ -13688,6 +14366,9 @@ namespace lime {
 	DEFINE_HL_PRIM (_I32, hl_application_quit, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_VOID, hl_application_set_main_loop, _TCFFIPOINTER _I32 _F64 _I32 _I32 _I32);
 	DEFINE_HL_PRIM (_VOID, hl_application_set_frame_rate, _TCFFIPOINTER _F64);
+	DEFINE_HL_PRIM (_VOID, hl_application_set_modal_callbacks, _TCFFIPOINTER _FUN(_VOID, _NO_ARG) _FUN(_VOID, _NO_ARG) _FUN(_VOID, _NO_ARG) _FUN(_VOID, _NO_ARG));
+	DEFINE_HL_PRIM (_VOID, hl_application_defer_modal_exception, _TCFFIPOINTER);
+	DEFINE_HL_PRIM (_BOOL, hl_application_set_menu, _TCFFIPOINTER _TBYTES);
 	DEFINE_HL_PRIM (_VOID, hl_application_set_vsync_mode, _TCFFIPOINTER _I32);
 	DEFINE_HL_PRIM (_BOOL, hl_application_update, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_TAUDIOBUFFER, hl_audio_load_bytes, _TBYTES _TAUDIOBUFFER);
@@ -13704,6 +14385,10 @@ namespace lime {
 	DEFINE_HL_PRIM (_F64, hl_data_pointer_offset, _F64 _I32);
 	DEFINE_HL_PRIM (_TBYTES, hl_deflate_compress, _TBYTES _TBYTES);
 	DEFINE_HL_PRIM (_TBYTES, hl_deflate_decompress, _TBYTES _TBYTES);
+	DEFINE_HL_PRIM (_VOID, hl_dock_icon_bounce, _BOOL);
+	DEFINE_HL_PRIM (_BOOL, hl_dock_icon_is_supported, _NO_ARG);
+	DEFINE_HL_PRIM (_VOID, hl_dock_icon_set_icon, _TIMAGEBUFFER);
+	DEFINE_HL_PRIM (_BOOL, hl_dock_icon_set_menu, _TBYTES);
 	DEFINE_HL_PRIM (_VOID, hl_drop_event_manager_register, _FUN(_VOID, _NO_ARG) _TDROP_EVENT);
 	DEFINE_HL_PRIM (_BYTES, hl_file_dialog_open_directory, _STRING _STRING _STRING);
 	DEFINE_HL_PRIM (_BYTES, hl_file_dialog_open_file, _STRING _STRING _STRING);
@@ -13737,11 +14422,23 @@ namespace lime {
 	DEFINE_HL_PRIM (_TBYTES, hl_font_render_glyph_with_flags, _TCFFIPOINTER _I32 _I32 _TBYTES);
 	DEFINE_HL_PRIM (_TBYTES, hl_font_render_glyphs, _TCFFIPOINTER _ARR _TBYTES);
 	DEFINE_HL_PRIM (_VOID, hl_font_set_size, _TCFFIPOINTER _I32 _I32);
+	DEFINE_HL_PRIM (_VOID, hl_font_set_stem_darkening, _TCFFIPOINTER _BOOL);
+	DEFINE_HL_PRIM (_VOID, hl_font_set_stem_darkening_parameters, _TCFFIPOINTER _ARR);
 	DEFINE_HL_PRIM (_VOID, hl_gamepad_add_mappings, _ARR);
 	DEFINE_HL_PRIM (_VOID, hl_gamepad_event_manager_register, _FUN(_VOID, _NO_ARG) _TGAMEPAD_EVENT);
 	DEFINE_HL_PRIM (_BYTES, hl_gamepad_get_device_guid, _I32);
 	DEFINE_HL_PRIM (_BYTES, hl_gamepad_get_device_name, _I32);
 	DEFINE_HL_PRIM (_VOID, hl_gamepad_rumble, _I32 _F64 _F64 _I32);
+	DEFINE_HL_PRIM (_I32, hl_gamepad_attach_virtual, _NO_ARG);
+	DEFINE_HL_PRIM (_VOID, hl_gamepad_detach_virtual, _I32);
+	DEFINE_HL_PRIM (_I32, hl_gamepad_get_type, _I32);
+	DEFINE_HL_PRIM (_DYN, hl_gamepad_get_virtual_output, _I32);
+	DEFINE_HL_PRIM (_BOOL, hl_gamepad_has_led, _I32);
+	DEFINE_HL_PRIM (_BOOL, hl_gamepad_has_rumble_triggers, _I32);
+	DEFINE_HL_PRIM (_BOOL, hl_gamepad_has_sensor, _I32 _I32);
+	DEFINE_HL_PRIM (_BOOL, hl_gamepad_rumble_triggers, _I32 _F64 _F64 _I32);
+	DEFINE_HL_PRIM (_BOOL, hl_gamepad_set_led, _I32 _I32 _I32 _I32);
+	DEFINE_HL_PRIM (_BOOL, hl_gamepad_set_sensor_enabled, _I32 _I32 _BOOL);
 	DEFINE_HL_PRIM (_TBYTES, hl_gzip_compress, _TBYTES _TBYTES);
 	DEFINE_HL_PRIM (_TBYTES, hl_gzip_decompress, _TBYTES _TBYTES);
 	DEFINE_HL_PRIM (_VOID, hl_haptic_vibrate, _I32 _I32);
@@ -13774,9 +14471,12 @@ namespace lime {
 	DEFINE_HL_PRIM (_I32, hl_key_code_from_scan_code, _I32);
 	DEFINE_HL_PRIM (_I32, hl_key_code_to_scan_code, _I32);
 	DEFINE_HL_PRIM (_VOID, hl_key_event_manager_register, _FUN (_VOID, _NO_ARG) _TKEY_EVENT);
+	DEFINE_HL_PRIM (_BYTES, hl_locale_get_preferred_locales, _NO_ARG);
 	DEFINE_HL_PRIM (_BYTES, hl_locale_get_system_locale, _NO_ARG);
 	DEFINE_HL_PRIM (_TBYTES, hl_lzma_compress, _TBYTES _TBYTES);
 	DEFINE_HL_PRIM (_TBYTES, hl_lzma_decompress, _TBYTES _TBYTES);
+	DEFINE_HL_PRIM (_VOID, hl_menu_event_manager_register, _FUN (_VOID, _NO_ARG) _TMENU_EVENT);
+	DEFINE_HL_PRIM (_I32, hl_menu_get_support, _NO_ARG);
 	DEFINE_HL_PRIM (_VOID, hl_mouse_event_manager_register, _FUN (_VOID, _NO_ARG) _TMOUSE_EVENT);
 	// DEFINE_PRIME1v (lime_neko_execute);
 	DEFINE_HL_PRIM (_VOID, hl_orientation_event_manager_register, _FUN (_VOID, _NO_ARG) _TORIENTATION_EVENT);
@@ -13803,6 +14503,15 @@ namespace lime {
 	DEFINE_HL_PRIM (_BOOL, hl_system_set_windows_console_mode, _I32 _I32);
 	DEFINE_HL_PRIM (_VOID, hl_text_event_manager_register, _FUN (_VOID, _NO_ARG) _TTEXT_EVENT);
 	DEFINE_HL_PRIM (_VOID, hl_touch_event_manager_register, _FUN (_VOID, _NO_ARG) _TTOUCH_EVENT);
+	DEFINE_HL_PRIM (_VOID, hl_tray_icon_close, _TCFFIPOINTER);
+	DEFINE_HL_PRIM (_TCFFIPOINTER, hl_tray_icon_create, _NO_ARG);
+	DEFINE_HL_PRIM (_VOID, hl_tray_icon_event_manager_register, _FUN (_VOID, _NO_ARG) _TTRAY_ICON_EVENT);
+	DEFINE_HL_PRIM (_I32, hl_tray_icon_get_id, _TCFFIPOINTER);
+	DEFINE_HL_PRIM (_BOOL, hl_tray_icon_is_supported, _NO_ARG);
+	DEFINE_HL_PRIM (_I32, hl_tray_icon_popup_menu, _TCFFIPOINTER _TBYTES);
+	DEFINE_HL_PRIM (_VOID, hl_tray_icon_set_icon, _TCFFIPOINTER _TIMAGEBUFFER);
+	DEFINE_HL_PRIM (_BOOL, hl_tray_icon_set_menu, _TCFFIPOINTER _TBYTES);
+	DEFINE_HL_PRIM (_VOID, hl_tray_icon_set_tooltip, _TCFFIPOINTER _STRING);
 	DEFINE_HL_PRIM (_VOID, hl_window_alert, _TCFFIPOINTER _STRING _STRING);
 	DEFINE_HL_PRIM (_VOID, hl_window_close, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_VOID, hl_window_context_flip, _TCFFIPOINTER);
@@ -13820,6 +14529,7 @@ namespace lime {
 	DEFINE_HL_PRIM (_I32, hl_window_get_height, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_I32, hl_window_get_id, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_BOOL, hl_window_get_mouse_lock, _TCFFIPOINTER);
+	DEFINE_HL_PRIM (_BOOL, hl_window_get_transparent, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_F64, hl_window_get_scale, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_BOOL, hl_window_get_text_input_enabled, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_DYN, hl_window_get_vulkan_drawable_size, _TCFFIPOINTER);
@@ -13934,6 +14644,7 @@ namespace lime {
 	DEFINE_HL_PRIM (_I32, hl_window_get_x, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_I32, hl_window_get_y, _TCFFIPOINTER);
 	DEFINE_HL_PRIM (_VOID, hl_window_move, _TCFFIPOINTER _I32 _I32);
+	DEFINE_HL_PRIM (_I32, hl_window_popup_menu, _TCFFIPOINTER _TBYTES _I32 _I32 _BOOL);
 	DEFINE_HL_PRIM (_DYN, hl_window_read_pixels, _TCFFIPOINTER _TRECTANGLE _TIMAGEBUFFER);
 	DEFINE_HL_PRIM (_VOID, hl_window_resize, _TCFFIPOINTER _I32 _I32);
 	DEFINE_HL_PRIM (_VOID, hl_window_set_minimum_size, _TCFFIPOINTER _I32 _I32);
@@ -13944,8 +14655,14 @@ namespace lime {
 	DEFINE_HL_PRIM (_BOOL, hl_window_set_fullscreen, _TCFFIPOINTER _BOOL);
 	DEFINE_HL_PRIM (_VOID, hl_window_set_icon, _TCFFIPOINTER _TIMAGEBUFFER);
 	DEFINE_HL_PRIM (_BOOL, hl_window_set_maximized, _TCFFIPOINTER _BOOL);
+	DEFINE_HL_PRIM (_BOOL, hl_window_set_menu, _TCFFIPOINTER _TBYTES);
 	DEFINE_HL_PRIM (_BOOL, hl_window_set_minimized, _TCFFIPOINTER _BOOL);
+	DEFINE_HL_PRIM (_BOOL, hl_window_flash, _TCFFIPOINTER _I32);
+	DEFINE_HL_PRIM (_BOOL, hl_window_get_keyboard_grab, _TCFFIPOINTER);
+	DEFINE_HL_PRIM (_DYN, hl_window_get_mouse_rect, _TCFFIPOINTER);
+	DEFINE_HL_PRIM (_VOID, hl_window_set_keyboard_grab, _TCFFIPOINTER _BOOL);
 	DEFINE_HL_PRIM (_VOID, hl_window_set_mouse_lock, _TCFFIPOINTER _BOOL);
+	DEFINE_HL_PRIM (_VOID, hl_window_set_mouse_rect, _TCFFIPOINTER _I32 _I32 _I32 _I32);
 	DEFINE_HL_PRIM (_BOOL, hl_window_set_resizable, _TCFFIPOINTER _BOOL);
 	DEFINE_HL_PRIM (_VOID, hl_window_set_text_input_enabled, _TCFFIPOINTER _BOOL);
 	DEFINE_HL_PRIM (_VOID, hl_window_set_text_input_rect, _TCFFIPOINTER _TRECTANGLE);
@@ -13992,6 +14709,8 @@ extern "C" int lime_opengl_register_prims ();
 extern "C" int lime_opengl_register_prims () { return 0; }
 #endif
 
+extern "C" int lime_video_register_prims ();
+
 #ifdef LIME_VORBIS
 extern "C" int lime_vorbis_register_prims ();
 #else
@@ -14006,6 +14725,7 @@ extern "C" int lime_register_prims () {
 	lime_harfbuzz_register_prims ();
 	lime_openal_register_prims ();
 	lime_opengl_register_prims ();
+	lime_video_register_prims ();
 	lime_vorbis_register_prims ();
 
 	return 0;
