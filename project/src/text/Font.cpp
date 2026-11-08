@@ -16,6 +16,7 @@
 #include FT_GLYPH_H
 #include FT_OUTLINE_H
 #include FT_MODULE_H
+#include FT_MULTIPLE_MASTERS_H
 #endif
 
 #ifdef GetGlyphIndices
@@ -98,9 +99,9 @@ unsigned long readNextChar (const char*& p)
 				c1 = ptr[0];
 				c2 = ptr[1];
 
+				// E0 needs A0-BF (no overlong forms), ED needs 80-9F (no surrogates)
 				if (((c1 == 0xE0) && !IS_IN_RANGE(c2, 0xA0, 0xBF)) ||
-					 ((c1 == 0xED) && !IS_IN_RANGE(c2, 0x80, 0x9F)) ||
-					 (!IS_IN_RANGE(c1, 0xE1, 0xEC) && !IS_IN_RANGE(c1, 0xEE, 0xEF))) {
+					 ((c1 == 0xED) && !IS_IN_RANGE(c2, 0x80, 0x9F))) {
 
 					 // malformed data, do something !!!
 					 return (unsigned long) -1;
@@ -112,9 +113,10 @@ unsigned long readNextChar (const char*& p)
 				c1 = ptr[0];
 				c2 = ptr[1];
 
+				// F0 needs 90-BF (no overlong forms), F4 needs 80-8F (nothing past U+10FFFF)
 				if (((c1 == 0xF0) && !IS_IN_RANGE(c2, 0x90, 0xBF)) ||
 					 ((c1 == 0xF4) && !IS_IN_RANGE(c2, 0x80, 0x8F)) ||
-					 !IS_IN_RANGE(c1, 0xF1, 0xF3)) {
+					 (c1 > 0xF4)) {
 
 					 // malformed data, do something !!!
 					 return (unsigned long) -1;
@@ -402,25 +404,11 @@ namespace lime {
 
 					/* Set charmap
 					 *
-					 * See http://www.microsoft.com/typography/otspec/name.htm for a list of
-					 * some possible platform-encoding pairs.  We're interested in 0-3 aka 3-1
-					 * - UCS-2.  Otherwise, fail. If a font has some unicode map, but lacks
-					 * UCS-2 - it is a broken or irrelevant font. What exactly Freetype will
-					 * select on face load (it promises most wide unicode, and if that will be
-					 * slower that UCS-2 - left as an excercise to check.
+					 * FT_Select_Charmap prefers a full Unicode map (UCS-4: 3-10, 0-4, 0-6) over a
+					 * BMP-only one (UCS-2: 3-1, 0-3), so characters beyond U+FFFF such as emoji
+					 * resolve. Fonts without a Unicode map keep the charmap FreeType chose on load.
 					 */
-					for (int i = 0; i < ((FT_Face)face)->num_charmaps; i++) {
-
-						FT_UShort pid = ((FT_Face)face)->charmaps[i]->platform_id;
-						FT_UShort eid = ((FT_Face)face)->charmaps[i]->encoding_id;
-
-						if (((pid == 0) && (eid == 3)) || ((pid == 3) && (eid == 1))) {
-
-							FT_Set_Charmap ((FT_Face)face, ((FT_Face)face)->charmaps[i]);
-
-						}
-
-					}
+					FT_Select_Charmap ((FT_Face)face, FT_ENCODING_UNICODE);
 
 				} else {
 
@@ -1328,9 +1316,32 @@ namespace lime {
 	}
 
 
-	int Font::RenderGlyph(int index, Bytes *bytes, int offset)
+	// subpixelX (1/64 pixel) shifts the outline before rasterizing, so a glyph drawn at a whole
+	// pixel shows where it falls between pixels; bitmap_left stays the whole-pixel origin
+	static int LoadGlyphShifted(void* face, int index, int loadFlags, int subpixelX)
 	{
-		if (FT_Load_Glyph((FT_Face)face, index, FT_LOAD_FORCE_AUTOHINT | FT_LOAD_DEFAULT) == 0)
+		if (subpixelX != 0)
+		{
+			FT_Vector delta;
+			delta.x = subpixelX;
+			delta.y = 0;
+			FT_Set_Transform((FT_Face)face, NULL, &delta);
+		}
+
+		int loaded = FT_Load_Glyph((FT_Face)face, index, loadFlags);
+
+		if (subpixelX != 0)
+		{
+			FT_Set_Transform((FT_Face)face, NULL, NULL);
+		}
+
+		return loaded;
+	}
+
+
+	int Font::RenderGlyph(int index, Bytes *bytes, int offset, int subpixelX)
+	{
+		if (LoadGlyphShifted(face, index, FT_LOAD_FORCE_AUTOHINT | FT_LOAD_DEFAULT, subpixelX) == 0)
 		{
 			if (FT_Render_Glyph(((FT_Face)face)->glyph, FT_RENDER_MODE_LCD) == 0)
 			{
@@ -1393,10 +1404,11 @@ namespace lime {
 	}
 
 
-	int Font::RenderGlyphWithFlags(int index, int loadFlags, Bytes *bytes, int offset)
+	int Font::RenderGlyphWithFlags(int index, int loadFlags, Bytes *bytes, int offset, int subpixelX)
 	{
 		int resolvedLoadFlags = FT_LOAD_NO_BITMAP | FT_LOAD_DEFAULT | loadFlags;
-		if (FT_Load_Glyph((FT_Face)face, index, resolvedLoadFlags) == 0)
+
+		if (LoadGlyphShifted(face, index, resolvedLoadFlags, subpixelX) == 0)
 		{
 			if (FT_Render_Glyph(((FT_Face)face)->glyph, FT_RENDER_MODE_NORMAL) == 0)
 			{
@@ -1527,6 +1539,39 @@ namespace lime {
 
 	}
 
+
+	bool Font::SetVariation (int tag, double coordinate)
+	{
+		FT_MM_Var* axes = 0;
+		if (!face || FT_Get_MM_Var((FT_Face)face, &axes) != 0 || !axes) return false;
+		std::vector<FT_Fixed> coordinates(axes->num_axis);
+		if (FT_Get_Var_Design_Coordinates((FT_Face)face, axes->num_axis, coordinates.data()) != 0) {
+			for (FT_UInt i = 0; i < axes->num_axis; ++i) coordinates[i] = axes->axis[i].def;
+		}
+		bool found = false;
+		for (FT_UInt i = 0; i < axes->num_axis; ++i) {
+			if (axes->axis[i].tag != (FT_ULong)(unsigned int)tag) continue;
+			double fixed = coordinate * 65536.0;
+			fixed = std::max((double)axes->axis[i].minimum, std::min((double)axes->axis[i].maximum, fixed));
+			coordinates[i] = (FT_Fixed)fixed;
+			found = true;
+			break;
+		}
+		bool applied = found && FT_Set_Var_Design_Coordinates((FT_Face)face, axes->num_axis, coordinates.data()) == 0;
+		if (applied) {
+			FT_Face nativeFace = (FT_Face)face;
+			bool hasWeight = false, hasItalic = false, bold = false, italic = false;
+			for (FT_UInt i = 0; i < axes->num_axis; ++i) {
+				if (axes->axis[i].tag == FT_MAKE_TAG('w','g','h','t')) { hasWeight = true; bold = coordinates[i] >= 600 * 65536; }
+				if (axes->axis[i].tag == FT_MAKE_TAG('i','t','a','l')) { hasItalic = true; italic = italic || coordinates[i] >= 32768; }
+				if (axes->axis[i].tag == FT_MAKE_TAG('s','l','n','t')) { hasItalic = true; italic = italic || coordinates[i] != 0; }
+			}
+			if (hasWeight) nativeFace->style_flags = bold ? nativeFace->style_flags | FT_STYLE_FLAG_BOLD : nativeFace->style_flags & ~FT_STYLE_FLAG_BOLD;
+			if (hasItalic) nativeFace->style_flags = italic ? nativeFace->style_flags | FT_STYLE_FLAG_ITALIC : nativeFace->style_flags & ~FT_STYLE_FLAG_ITALIC;
+		}
+		FT_Done_MM_Var((FT_Library)library, axes);
+		return applied;
+	}
 
 	void Font::SetStemDarkening (bool enable)
 	{

@@ -931,8 +931,10 @@ namespace lime {
 
 	void lime_gl_compressed_tex_image_3d (int target, int level, int internalformat, int width, int height, int depth, int border, int imageSize, double data) {
 
-		#ifdef LIME_GLES3_API
-		glCompressedTexImage3D (target, level, internalformat, width, height, depth, border, imageSize, (void*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glCompressedTexImage3D) {
+			glCompressedTexImage3D (target, level, internalformat, width, height, depth, border, imageSize, (void*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -940,8 +942,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_compressed_tex_image_3d) (int target, int level, int internalformat, int width, int height, int depth, int border, int imageSize, double data) {
 
-		#ifdef LIME_GLES3_API
-		glCompressedTexImage3D (target, level, internalformat, width, height, depth, border, imageSize, (void*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glCompressedTexImage3D) {
+			glCompressedTexImage3D (target, level, internalformat, width, height, depth, border, imageSize, (void*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -963,8 +967,10 @@ namespace lime {
 
 	void lime_gl_compressed_tex_sub_image_3d (int target, int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, int format, int imageSize, double data) {
 
-		#ifdef LIME_GLES3_API
-		glCompressedTexSubImage3D (target, level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize, (void*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glCompressedTexSubImage3D) {
+			glCompressedTexSubImage3D (target, level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize, (void*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -972,8 +978,10 @@ namespace lime {
 
 	HL_PRIM void HL_NAME(hl_gl_compressed_tex_sub_image_3d) (int target, int level, int xoffset, int yoffset, int zoffset, int width, int height, int depth, int format, int imageSize, double data) {
 
-		#ifdef LIME_GLES3_API
-		glCompressedTexSubImage3D (target, level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize, (void*)(uintptr_t)data);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glCompressedTexSubImage3D) {
+			glCompressedTexSubImage3D (target, level, xoffset, yoffset, zoffset, width, height, depth, format, imageSize, (void*)(uintptr_t)data);
+		}
 		#endif
 
 	}
@@ -995,6 +1003,28 @@ namespace lime {
 		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
 		if (glCopyBufferSubData) {
 			glCopyBufferSubData (readTarget, writeTarget, (GLintptr)(uintptr_t)readOffset, (GLintptr)(uintptr_t)writeOffset, size);
+		}
+		#endif
+
+	}
+
+
+	void lime_gl_copy_image_sub_data (int srcName, int srcTarget, int srcLevel, int srcX, int srcY, int srcZ, int dstName, int dstTarget, int dstLevel, int dstX, int dstY, int dstZ, int srcWidth, int srcHeight, int srcDepth) {
+
+		#ifndef LIME_GLES
+		if (glCopyImageSubData) {
+			glCopyImageSubData (srcName, srcTarget, srcLevel, srcX, srcY, srcZ, dstName, dstTarget, dstLevel, dstX, dstY, dstZ, srcWidth, srcHeight, srcDepth);
+		}
+		#endif
+
+	}
+
+
+	HL_PRIM void HL_NAME(hl_gl_copy_image_sub_data) (int srcName, int srcTarget, int srcLevel, int srcX, int srcY, int srcZ, int dstName, int dstTarget, int dstLevel, int dstX, int dstY, int dstZ, int srcWidth, int srcHeight, int srcDepth) {
+
+		#ifndef LIME_GLES
+		if (glCopyImageSubData) {
+			glCopyImageSubData (srcName, srcTarget, srcLevel, srcX, srcY, srcZ, dstName, dstTarget, dstLevel, dstX, dstY, dstZ, srcWidth, srcHeight, srcDepth);
 		}
 		#endif
 
@@ -2237,8 +2267,8 @@ namespace lime {
 	double lime_gl_get_buffer_pointerv (int target, int pname) {
 
 		uintptr_t result = 0;
-		#ifdef LIME_GLES3_API
-		glGetBufferPointerv (target, pname, (void**)&result);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetBufferPointerv) glGetBufferPointerv (target, pname, (void**)&result);
 		#endif
 		return (double)result;
 
@@ -2248,8 +2278,8 @@ namespace lime {
 	HL_PRIM double HL_NAME(hl_gl_get_buffer_pointerv) (int target, int pname) {
 
 		uintptr_t result = 0;
-		#ifdef LIME_GLES3_API
-		glGetBufferPointerv (target, pname, (void**)&result);
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glGetBufferPointerv) glGetBufferPointerv (target, pname, (void**)&result);
 		#endif
 		return (double)result;
 
@@ -3998,24 +4028,20 @@ namespace lime {
 
 	double lime_gl_map_buffer_range (int target, double offset, int length, int access) {
 
-		#ifdef LIME_GLES3_API
-		uintptr_t result = (uintptr_t)glMapBufferRange (target, (GLintptr)(uintptr_t)offset, length, access);
-		return (double)result;
-		#else
-		return 0;
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glMapBufferRange) return (double)(uintptr_t)glMapBufferRange (target, (GLintptr)(uintptr_t)offset, length, access);
 		#endif
+		return 0;
 
 	}
 
 
 	HL_PRIM double HL_NAME(hl_gl_map_buffer_range) (int target, double offset, int length, int access) {
 
-		#ifdef LIME_GLES3_API
-		uintptr_t result = (uintptr_t)glMapBufferRange (target, (GLintptr)(uintptr_t)offset, length, access);
-		return (double)result;
-		#else
-		return 0;
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glMapBufferRange) return (double)(uintptr_t)glMapBufferRange (target, (GLintptr)(uintptr_t)offset, length, access);
 		#endif
+		return 0;
 
 	}
 
@@ -5297,22 +5323,20 @@ namespace lime {
 
 	bool lime_gl_unmap_buffer (int target) {
 
-		#ifdef LIME_GLES3_API
-		return glUnmapBuffer (target);
-		#else
-		return false;
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glUnmapBuffer) return glUnmapBuffer (target);
 		#endif
+		return false;
 
 	}
 
 
 	HL_PRIM bool HL_NAME(hl_gl_unmap_buffer) (int target) {
 
-		#ifdef LIME_GLES3_API
-		return glUnmapBuffer (target);
-		#else
-		return false;
+		#if defined (LIME_GLES3_API) || !defined (LIME_GLES)
+		if (glUnmapBuffer) return glUnmapBuffer (target);
 		#endif
+		return false;
 
 	}
 
@@ -5624,6 +5648,7 @@ namespace lime {
 		if (!initialized) {
 
 			initialized = true;
+			result = true;
 
 			#ifdef HX_LINUX
 
@@ -5674,6 +5699,14 @@ namespace lime {
 	}
 
 
+	// The next Init looks the functions up again, as after SDL loads another OpenGL library
+	void OpenGLBindings::Reload () {
+
+		initialized = false;
+
+	}
+
+
 	DEFINE_PRIME1v (lime_gl_active_texture);
 	DEFINE_PRIME2v (lime_gl_attach_shader);
 	DEFINE_PRIME2v (lime_gl_begin_query);
@@ -5713,6 +5746,7 @@ namespace lime {
 	DEFINE_PRIME9v (lime_gl_compressed_tex_sub_image_2d);
 	DEFINE_PRIME11v (lime_gl_compressed_tex_sub_image_3d);
 	DEFINE_PRIME5v (lime_gl_copy_buffer_sub_data);
+	DEFINE_PRIME15v (lime_gl_copy_image_sub_data);
 	DEFINE_PRIME8v (lime_gl_copy_tex_image_2d);
 	DEFINE_PRIME8v (lime_gl_copy_tex_sub_image_2d);
 	DEFINE_PRIME9v (lime_gl_copy_tex_sub_image_3d);
@@ -5990,6 +6024,7 @@ namespace lime {
 	DEFINE_HL_PRIM (_VOID, hl_gl_compressed_tex_sub_image_2d, _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _F64);
 	DEFINE_HL_PRIM (_VOID, hl_gl_compressed_tex_sub_image_3d, _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _F64);
 	DEFINE_HL_PRIM (_VOID, hl_gl_copy_buffer_sub_data, _I32 _I32 _F64 _F64 _I32);
+	DEFINE_HL_PRIM (_VOID, hl_gl_copy_image_sub_data, _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32);
 	DEFINE_HL_PRIM (_VOID, hl_gl_copy_tex_image_2d, _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32);
 	DEFINE_HL_PRIM (_VOID, hl_gl_copy_tex_sub_image_2d, _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32);
 	DEFINE_HL_PRIM (_VOID, hl_gl_copy_tex_sub_image_3d, _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32 _I32);

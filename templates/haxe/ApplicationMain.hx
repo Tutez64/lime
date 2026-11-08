@@ -67,8 +67,9 @@ import ::APP_MAIN::;
 				depth: ::depthBuffer::,
 				hardware: ::hardware::,
 				stencil: ::stencilBuffer::,
-				type: ::if renderType::"::renderType::"::else::null::end::,
-				vsync: ::vsync::
+				type: null,
+				vsync: ::vsync::,
+				vsyncMode: ::if vsyncMode::"::vsyncMode::"::else::null::end::
 			};
 
 		if (app.window == null)

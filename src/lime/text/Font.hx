@@ -66,6 +66,25 @@ class Font
 
 	public var src:Dynamic;
 
+	/** Sets an OpenType variable-font axis. Unsupported axes/fonts return false.
+	 * Clone/reload a font before changing an axis when other renderers share its source.
+	 */
+	public function setVariation(tag:String, coordinate:Float):Bool {
+		if (tag == null || tag.length != 4 || !Math.isFinite(coordinate)) return false;
+		for (i in 0...4) if (tag.charCodeAt(i) < 32 || tag.charCodeAt(i) > 126) return false;
+		#if (lime_cffi && !macro)
+		if (src == null) return false;
+		var changed = NativeCFFI.lime_font_set_variation(src, tag, coordinate);
+		if (changed) {
+			isBold = NativeCFFI.lime_font_is_bold(src);
+			isItalic = NativeCFFI.lime_font_is_italic(src);
+		}
+		return changed;
+		#else
+		return false;
+		#end
+	}
+
 	/**
 	 * The underline position of the font.
 	 */
@@ -121,7 +140,8 @@ class Font
 		}
 		stemDarkening = enable;
 		#if (lime_cffi && !macro)
-		NativeCFFI.lime_font_set_stem_darkening(src, enable);
+		// A font with no data yet takes the setting when it loads
+		if (src != null) NativeCFFI.lime_font_set_stem_darkening(src, enable);
 		#end
 		return stemDarkening;
 	}
@@ -148,23 +168,30 @@ class Font
 	{
 		if (params == null || params.length != 8)
 		{
-			throw "Darking parameters length must be exactly 8";
+			throw "Darkening parameters length must be exactly 8";
 		}
 		if (stemDarkeningParameters == params)
 		{
 			return stemDarkeningParameters;
 		}
 		stemDarkeningParameters = params;
+		__setStemDarkeningParameters();
+		return stemDarkeningParameters;
+	}
+
+	@:noCompletion private function __setStemDarkeningParameters():Void
+	{
 		#if (lime_cffi && !macro)
+		if (src == null || stemDarkeningParameters == null) return;
 		#if hl
-		var _params = new hl.NativeArray<Int>(params.length);
-		for (i in 0...params.length)
-			_params[i] = params[i];
-		var params = _params;
+		var params = new hl.NativeArray<Int>(stemDarkeningParameters.length);
+		for (i in 0...stemDarkeningParameters.length)
+			params[i] = stemDarkeningParameters[i];
+		#else
+		var params = stemDarkeningParameters;
 		#end
 		NativeCFFI.lime_font_set_stem_darkening_parameters(src, params);
 		#end
-		return stemDarkeningParameters;
 	}
 
 	@:noCompletion private var __fontID:String;
@@ -421,9 +448,13 @@ class Font
 	 * @param fontSize The size to render the glyph at.
 	 * @param dpi The DPI used to size the glyph before rasterization.
 	 * @param loadFlags Additional FreeType load flags to apply when rasterizing.
+	 * @param subpixelX A horizontal shift of the outline before rasterizing, in pixels (0 to 1): for
+	 *   drawing a glyph at a whole pixel while showing where it falls between pixels. The image's
+	 *   origin stays at the whole pixel. Without `loadFlags`, a shifted glyph is rendered as
+	 *   `renderGlyph()` renders it.
 	 * @return An `Image` instance representing the rendered glyph.
 	 */
-	public function renderGlyphWithLoadFlags(glyph:Glyph, fontSize:Int, dpi:Int = 96, ?loadFlags:Int):Image
+	public function renderGlyphWithLoadFlags(glyph:Glyph, fontSize:Int, dpi:Int = 96, ?loadFlags:Int, subpixelX:Float = 0.0):Image
 	{
 		#if (lime_cffi && !macro)
 		__setSize(fontSize, dpi);
@@ -432,8 +463,10 @@ class Font
 		var bytes:Bytes = Bytes.alloc(0); // Allocate some reasonable initial size
 
 		// Call native function to render glyph and get byte data
-		bytes = loadFlags == null ? NativeCFFI.lime_font_render_glyph(src, glyph,
-			bytes) : NativeCFFI.lime_font_render_glyph_with_flags(src, glyph, loadFlags, bytes);
+		var subpixelX64:Int = Math.round(subpixelX * 64);
+		bytes = subpixelX64 != 0 ? NativeCFFI.lime_font_render_glyph_with_offset(src, glyph, loadFlags == null ? -1 : loadFlags, subpixelX64, bytes)
+			: loadFlags == null ? NativeCFFI.lime_font_render_glyph(src, glyph, bytes)
+			: NativeCFFI.lime_font_render_glyph_with_flags(src, glyph, loadFlags, bytes);
 
 		if (bytes != null && bytes.length > 0)
 		{
@@ -734,6 +767,9 @@ class Font
 			unitsPerEM = NativeCFFI.lime_font_get_units_per_em(src);
 			isBold = NativeCFFI.lime_font_is_bold(src);
 			isItalic = NativeCFFI.lime_font_is_italic(src);
+
+			if (stemDarkening) NativeCFFI.lime_font_set_stem_darkening(src, true);
+			__setStemDarkeningParameters();
 		}
 		#end
 

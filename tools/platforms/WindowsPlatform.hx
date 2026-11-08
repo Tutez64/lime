@@ -626,6 +626,9 @@ class WindowsPlatform extends PlatformTarget
 					flags.push("-Dno_console");
 				}
 
+				// The program runs from the application directory, not where hxcpp links it (for libhxcpp's HXCPP_PGO)
+				flags.push("-DHXCPP_PGO_RUN_DIR=" + Path.tryFullPath(applicationDirectory));
+
 				if (!project.targetFlags.exists("static"))
 				{
 					System.runCommand("", "haxe", haxeArgs);
@@ -1062,7 +1065,11 @@ class WindowsPlatform extends PlatformTarget
 			{
 				windowsIcons = [new Icon(System.findTemplate(project.templatePaths, "default/icon.svg"))];
 			}
-			context.HAS_ICON = IconHelper.createWindowsIcon(windowsIcons, Path.combine(targetDirectory + "/obj", "ApplicationMain.ico"));
+			var iconPath = Path.combine(targetDirectory + "/obj", "ApplicationMain.ico");
+			context.HAS_ICON = IconHelper.createWindowsIcon(windowsIcons, iconPath);
+			// hxcpp only recompiles ApplicationMain.rc when its text changes, so the
+			// icon's hash goes into it; otherwise a new icon keeps the old resource.
+			context.ICON_HASH = context.HAS_ICON ? haxe.crypto.Md5.make(File.getBytes(iconPath)).toHex() : "";
 			ProjectHelper.recursiveSmartCopyTemplate(project, "windows/resource", targetDirectory + "/obj", context);
 
 			if (project.targetFlags.exists("static"))

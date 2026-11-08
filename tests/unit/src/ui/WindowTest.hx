@@ -5,6 +5,8 @@ import lime.graphics.Image;
 import lime.math.Rectangle;
 import lime.ui.MouseCursor;
 import lime.ui.Window;
+import lime.ui.WindowAppearance;
+import lime.ui.WindowHandleType;
 import utest.Assert;
 import utest.Test;
 
@@ -20,6 +22,61 @@ class WindowTest extends Test
 	}
 
 	#if (lime_cffi && !macro && (windows || mac || linux) && !rpi)
+	public function testAppearancePreferenceAndInvalidValues():Void
+	{
+		var window = create(false);
+		if (window == null) { canCreateWindows(); return; }
+		Assert.equals(WindowAppearance.SYSTEM, window.appearance);
+		window.appearance = WindowAppearance.DARK;
+		Assert.equals(WindowAppearance.DARK, window.appearance);
+		var applied = window.effectiveAppearance;
+		window.appearance = cast "invalid";
+		Assert.equals(WindowAppearance.DARK, window.appearance);
+		Assert.equals(applied, window.effectiveAppearance);
+		window.appearance = null;
+		Assert.equals(WindowAppearance.DARK, window.appearance);
+		window.appearance = WindowAppearance.SYSTEM;
+		Assert.equals(WindowAppearance.SYSTEM, window.appearance);
+	}
+
+	public function testAppearanceChangesArePerWindow():Void
+	{
+		var dark = create(false), light = create(false);
+		if (dark == null || light == null) { canCreateWindows(); return; }
+		dark.appearance = WindowAppearance.DARK;
+		light.appearance = WindowAppearance.LIGHT;
+		Assert.equals(WindowAppearance.DARK, dark.appearance);
+		Assert.equals(WindowAppearance.LIGHT, light.appearance);
+		// Unsupported decorations retain the preference and report System.
+		if (dark.effectiveAppearance == WindowAppearance.SYSTEM || light.effectiveAppearance == WindowAppearance.SYSTEM) {
+			Assert.pass();
+			return;
+		}
+		Assert.equals(WindowAppearance.DARK, dark.effectiveAppearance);
+		Assert.equals(WindowAppearance.LIGHT, light.effectiveAppearance);
+		dark.appearance = WindowAppearance.LIGHT;
+		Assert.equals(WindowAppearance.LIGHT, dark.effectiveAppearance);
+		Assert.equals(WindowAppearance.LIGHT, light.effectiveAppearance);
+		dark.appearance = WindowAppearance.SYSTEM;
+		Assert.equals(WindowAppearance.LIGHT, light.effectiveAppearance);
+	}
+
+	public function testAppearanceCreationAttribute():Void
+	{
+		var window = Application.current.createWindow({width:64, height:64, hidden:true, appearance:WindowAppearance.DARK});
+		if (window == null) { canCreateWindows(); return; }
+		Assert.equals(WindowAppearance.DARK, window.appearance);
+		if (window.effectiveAppearance != WindowAppearance.SYSTEM)
+			Assert.equals(WindowAppearance.DARK, window.effectiveAppearance);
+	}
+
+	public function testAlwaysOnTopCreationAttribute():Void
+	{
+		var window = Application.current.createWindow({width:64, height:64, hidden:true, alwaysOnTop:true});
+		if (window == null) { canCreateWindows(); return; }
+		Assert.isTrue(window.alwaysOnTop);
+	}
+
 	public function testTransparentWindowsAreTransparent():Void
 	{
 		var window = create(true);
@@ -31,6 +88,7 @@ class WindowTest extends Test
 		}
 
 		Assert.isTrue(isTransparent(window), "a window created transparent was made opaque");
+		Assert.equals(isTransparent(window), window.transparent);
 	}
 
 	public function testWindowsAfterATransparentOneAreOpaque():Void
@@ -47,6 +105,65 @@ class WindowTest extends Test
 		}
 
 		Assert.isFalse(isTransparent(second), "a window created after a transparent one was made transparent too");
+	}
+
+	public function testEachSizeLimitSetsOnlyItself():Void
+	{
+		var window = create(false);
+
+		if (window == null)
+		{
+			canCreateWindows();
+			return;
+		}
+
+		window.minWidth = 40;
+		window.minHeight = 30;
+		window.maxWidth = 800;
+		window.maxHeight = 600;
+
+		Assert.equals("40,30,800,600", [window.minWidth, window.minHeight, window.maxWidth, window.maxHeight].join(","));
+	}
+
+	public function testTheFrameRateOutlastsOtherFrameSettings():Void
+	{
+		// The first window created becomes the application's own
+		if (create(false) == null)
+		{
+			canCreateWindows();
+			return;
+		}
+
+		var application = Application.current;
+		var window = application.window;
+		var rate = window.frameRate;
+		window.frameRate = 30;
+
+		// Each of these applies every frame setting again, from the rate the application keeps
+		application.vsyncMode = application.vsyncMode;
+		application.frameProfile = application.frameProfile;
+
+		Assert.equals(30.0, window.frameRate);
+		window.frameRate = rate;
+	}
+
+	public function testAWindowCanBeClosedWhileItRenders():Void
+	{
+		// Closing the last window of the application ends it, so another stays open
+		if (create(false) == null)
+		{
+			canCreateWindows();
+			return;
+		}
+
+		var window = create(false);
+		window.onRender.add(function(_) window.close());
+
+		var backend = @:privateAccess Application.current.__backend;
+		@:privateAccess backend.renderEventInfo.type = RENDER;
+		@:privateAccess backend.handleRenderEvent();
+
+		Assert.isNull(@:privateAccess window.__backend.handle, "the window was not closed");
 	}
 
 	public function testFlashing():Void
@@ -136,6 +253,25 @@ class WindowTest extends Test
 		window.cursor = CUSTOM;
 		Assert.equals(MouseCursor.CUSTOM, window.cursor, "the custom cursor could not be shown again");
 		window.cursor = DEFAULT;
+	}
+
+	public function testNativeHandleIsTheSystemsOwnWindow():Void
+	{
+		var first = create(false), second = create(false);
+		if (first == null || second == null) { canCreateWindows(); return; }
+
+		var handle = first.nativeHandle;
+		Assert.notNull(handle);
+		Assert.equals(#if windows WindowHandleType.WINDOWS #elseif mac WindowHandleType.COCOA #else WindowHandleType.X11 #end, handle.type);
+		Assert.isTrue(handle.window != 0);
+		Assert.equals(#if linux true #else false #end, handle.display != 0);
+
+		// The same window each time, and each window its own
+		Assert.isTrue(handle.window == first.nativeHandle.window);
+		Assert.isTrue(handle.window != second.nativeHandle.window);
+
+		first.close();
+		Assert.isNull(first.nativeHandle);
 	}
 
 	public function testPreciseMouseWheelGivesFractionsOfAStep():Void
