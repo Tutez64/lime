@@ -706,6 +706,144 @@ class ImageDataUtil
 			_mask.a = 0xFF;
 		}
 
+		#if (js && html5)
+		if (image.type == DATA) ImageCanvasUtil.convertToData(image);
+		#end
+
+		if (image.type == DATA && image.buffer != null && image.buffer.data != null)
+		{
+			// the pixels are read from the buffer row by row rather than through getPixel32: the first and the last
+			// row with a hit, then between them the first and the last column, each row stopping where another one
+			// already went further
+			var data = image.buffer.data;
+			var bufferFormat = image.buffer.format;
+			var premultiplied = image.buffer.premultiplied;
+			var stride = image.buffer.width * 4;
+			var origin = image.offsetY * stride + image.offsetX * 4;
+			var width = image.width;
+			var height = image.height;
+			var m:Int = _mask;
+			var c:Int = _color;
+			// alpha is the low byte of an RGBA value and is the same premultiplied or not
+			var alphaOnly = (m & 0xFFFFFF00) == 0;
+			var alphaOffset = bufferFormat == ARGB32 ? 0 : 3;
+			var texel:RGBA = 0;
+			var value:Int;
+			var row:Int;
+			var found = false;
+
+			for (y in 0...height)
+			{
+				row = origin + y * stride;
+
+				for (x in 0...width)
+				{
+					if (alphaOnly)
+					{
+						value = data[row + x * 4 + alphaOffset];
+					}
+					else
+					{
+						texel.readUInt8(data, row + x * 4, bufferFormat, premultiplied);
+						value = texel;
+					}
+
+					if (findColor ? (value & m) == c : (value & m) != c)
+					{
+						found = true;
+						break;
+					}
+				}
+
+				if (found)
+				{
+					top = y;
+					break;
+				}
+			}
+
+			if (found)
+			{
+				var y = height;
+				found = false;
+
+				while (--y >= top && !found)
+				{
+					row = origin + y * stride;
+
+					for (x in 0...width)
+					{
+						if (alphaOnly)
+						{
+							value = data[row + x * 4 + alphaOffset];
+						}
+						else
+						{
+							texel.readUInt8(data, row + x * 4, bufferFormat, premultiplied);
+							value = texel;
+						}
+
+						if (findColor ? (value & m) == c : (value & m) != c)
+						{
+							found = true;
+							bottom = y;
+							break;
+						}
+					}
+				}
+
+				left = width;
+				right = -1;
+
+				for (y in top...bottom + 1)
+				{
+					row = origin + y * stride;
+
+					for (x in 0...left)
+					{
+						if (alphaOnly)
+						{
+							value = data[row + x * 4 + alphaOffset];
+						}
+						else
+						{
+							texel.readUInt8(data, row + x * 4, bufferFormat, premultiplied);
+							value = texel;
+						}
+
+						if (findColor ? (value & m) == c : (value & m) != c)
+						{
+							left = x;
+							break;
+						}
+					}
+
+					var x = width;
+
+					while (--x > right)
+					{
+						if (alphaOnly)
+						{
+							value = data[row + x * 4 + alphaOffset];
+						}
+						else
+						{
+							texel.readUInt8(data, row + x * 4, bufferFormat, premultiplied);
+							value = texel;
+						}
+
+						if (findColor ? (value & m) == c : (value & m) != c)
+						{
+							right = x;
+							break;
+						}
+					}
+				}
+			}
+
+			return __colorBoundsRect(image, left, right, top, bottom);
+		}
+
 		var pixel:Int;
 		var hit:Bool;
 
@@ -803,6 +941,11 @@ class ImageDataUtil
 			}
 		}
 
+		return __colorBoundsRect(image, left, right, top, bottom);
+	}
+
+	@:noCompletion private static function __colorBoundsRect(image:Image, left:Int, right:Int, top:Int, bottom:Int):Rectangle
+	{
 		var w = right - left;
 		var h = bottom - top;
 

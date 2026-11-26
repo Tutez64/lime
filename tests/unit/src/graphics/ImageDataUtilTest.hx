@@ -13,6 +13,85 @@ class ImageDataUtilTest extends Test
 		super();
 	}
 
+	// on Flash, an Image is not of the DATA type and keeps the scan through getPixel32
+	public function testGetColorBoundsRectFindsWhatAScanOfEveryPixelFinds()
+	{
+		// with masks of the alpha alone, of one channel and of all four, on images that hold nothing, a few
+		// pixels or many, alone in their buffer or a part of it
+		var masks = [0xFF000000, 0xFFFFFFFF, 0x00FFFFFF, 0x0000FF00, 0x000000FF, 0];
+		var seed = 7;
+
+		function next(n:Int):Int
+		{
+			seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
+			return (seed >> 8) % n;
+		}
+
+		var differences = 0;
+
+		for (round in 0...240)
+		{
+			var buffer = new Image(null, 0, 0, 1 + next(12), 1 + next(12), 0x00000000);
+			var filled = next(4);
+
+			for (y in 0...buffer.height)
+			{
+				for (x in 0...buffer.width)
+				{
+					if (filled > 0 && next(filled == 1 ? 9 : 2) == 0)
+					{
+						buffer.setPixel32(x, y, (next(256) << 24) | (next(256) << 16) | (next(256) << 8) | next(256), ARGB32);
+					}
+				}
+			}
+
+			if (next(2) == 0) buffer.premultiplied = true;
+
+			var image = buffer;
+
+			if (next(3) == 0)
+			{
+				var x = next(buffer.width), y = next(buffer.height);
+				image = new Image(buffer.buffer, x, y, 1 + next(buffer.width - x), 1 + next(buffer.height - y));
+			}
+
+			var mask = masks[next(masks.length)];
+			var color = switch (next(3))
+			{
+				case 0: 0;
+				case 1: mask & (next(256) * 0x01010101);
+				default: image.getPixel32(next(image.width), next(image.height), ARGB32);
+			}
+			var findColor = next(2) == 0;
+
+			var left = image.width, top = image.height, right = -1, bottom = -1;
+
+			for (y in 0...image.height)
+			{
+				for (x in 0...image.width)
+				{
+					var hit = (image.getPixel32(x, y, ARGB32) & mask) == color;
+
+					if (hit == findColor)
+					{
+						if (x < left) left = x;
+						if (x > right) right = x;
+						if (y < top) top = y;
+						if (y > bottom) bottom = y;
+					}
+				}
+			}
+
+			var rect = image.getColorBoundsRect(mask, color, findColor, ARGB32);
+			var same = right < 0 ? (rect.width == 0 && rect.height == 0) : (rect.x == left && rect.y == top && rect.width == right - left + 1
+				&& rect.height == bottom - top + 1);
+
+			if (!same) differences++;
+		}
+
+		Assert.equals(0, differences);
+	}
+
 	// on Flash, the pixels of an Image are in a flash.display.BitmapData, not in the data this blur reads
 	#if !flash
 	public function testGaussianBlurMultipliesTheBlurredAlphaByTheStrength()
