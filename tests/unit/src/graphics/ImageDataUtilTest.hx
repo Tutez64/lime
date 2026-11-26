@@ -110,6 +110,66 @@ class ImageDataUtilTest extends Test
 		Assert.equals(0xFF, blurredDot(255).getPixel32(4, 4) & 0xFF);
 	}
 
+	public function testGaussianBlurOfTheAlphaAloneWritesTheSameAlpha()
+	{
+		var seed = 11;
+
+		function next(n:Int):Int
+		{
+			seed = (seed * 1103515245 + 12345) & 0x7FFFFFFF;
+			return (seed >> 8) % n;
+		}
+
+		for (round in 0...60)
+		{
+			// two rows at least: the blur reads the row under the first one
+			var width = 1 + next(24), height = 2 + next(24);
+			var premultiplied = next(2) == 0;
+			var colors = [for (i in 0...width * height) next(3) == 0 ? (next(256) << 24) | (next(256) << 16) | (next(256) << 8) | next(256) : 0];
+			var blurX = next(4) == 0 ? 0 : next(33), blurY = next(4) == 0 ? 0 : next(33), quality = next(5);
+			var strength = [1.0, 2.0, 0.5][next(3)];
+			var message = "round " + round + ", " + width + "x" + height + ", blur " + blurX + "x" + blurY + ", quality " + quality;
+
+			var images = [];
+
+			for (alphaOnly in [false, true])
+			{
+				var pair = [];
+
+				for (i in 0...2)
+				{
+					var image = new Image(null, 0, 0, width, height, 0x00000000);
+
+					for (y in 0...height)
+					{
+						for (x in 0...width)
+						{
+							image.setPixel32(x, y, colors[y * width + x], ARGB32);
+						}
+					}
+
+					image.premultiplied = premultiplied;
+					pair.push(image);
+				}
+
+				ImageDataUtil.gaussianBlur(pair[0], pair[1], pair[1].rect, new Vector2(), blurX, blurY, quality, strength, null, alphaOnly);
+				images.push(pair[0]);
+			}
+
+			var same = true, clear = true;
+
+			for (i in 0...width * height)
+			{
+				if (images[1].data[i * 4 + 3] != images[0].data[i * 4 + 3]) same = false;
+				if (images[1].data[i * 4] != 0 || images[1].data[i * 4 + 1] != 0 || images[1].data[i * 4 + 2] != 0) clear = false;
+			}
+
+			Assert.isTrue(same, "another alpha, " + message);
+			Assert.isTrue(clear, "a color left, " + message);
+			Assert.equals(premultiplied, images[1].premultiplied);
+		}
+	}
+
 	private static function blurredDot(strength:Float):Image
 	{
 		var source = new Image(null, 0, 0, 9, 9, 0x00000000);

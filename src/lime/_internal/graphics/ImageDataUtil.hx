@@ -633,12 +633,14 @@ class ImageDataUtil
 	}
 
 	public static function gaussianBlur(image:Image, sourceImage:Image, sourceRect:Rectangle, destPoint:Vector2, blurX:Float = 4, blurY:Float = 4,
-			quality:Int = 1, strength:Float = 1, color:Null<Int> = null):Image
+			quality:Int = 1, strength:Float = 1, color:Null<Int> = null, alphaOnly:Bool = false):Image
 	{
 		// TODO: Support sourceRect better, do not modify sourceImage, create C++ implementation for native
 
 		// TODO: Faster approach
-		var imagePremultiplied = image.premultiplied;
+		// with alphaOnly, for a caller that then gives every pixel one color: the alpha is the same premultiplied or
+		// not, and the other channels are set to 0
+		var imagePremultiplied = !alphaOnly && image.premultiplied;
 		if (imagePremultiplied) image.premultiplied = false;
 
 		// TODO: Use ImageDataView
@@ -649,7 +651,14 @@ class ImageDataUtil
 
 		// }
 
-		StackBlur.blur(image, sourceImage, sourceRect, destPoint, blurX, blurY, quality);
+		if (alphaOnly)
+		{
+			StackBlur.blurAlpha(image, sourceImage, sourceRect, destPoint, blurX, blurY, quality);
+		}
+		else
+		{
+			StackBlur.blur(image, sourceImage, sourceRect, destPoint, blurX, blurY, quality);
+		}
 
 		if (strength != 1)
 		{
